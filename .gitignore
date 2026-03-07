@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+network_evidence.json
+db.sqlite3
+.DS_Store
+*.pkl

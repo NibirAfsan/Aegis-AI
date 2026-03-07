@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Aegis-AI Dashboard</title>
+    <style>
+        body { background-color: #0a0a0a; color: #00ff00; font-family: 'Courier New', Courier, monospace; padding: 40px; }
+        .terminal-box { border: 1px solid #00ff00; padding: 25px; background: #000; box-shadow: 0 0 15px #00ff00; border-radius: 5px; margin-bottom: 20px; }
+        .input-group { margin-bottom: 20px; }
+        input, select { background: #111; color: #00ff00; border: 1px solid #00ff00; padding: 12px; margin-right: 10px; font-family: inherit; }
+        button { background: #00ff00; color: #000; border: none; padding: 12px 25px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #008800; color: #fff; }
+        button:disabled { background: #333; color: #666; cursor: wait; }
+        pre { background: #050505; border-left: 3px solid #00ff00; padding: 15px; overflow-x: auto; white-space: pre-wrap; font-size: 14px; min-height: 50px; }
+        #loader { color: yellow; display: none; margin: 10px 0; }
+        .defense-box { border: 1px solid #ff0000; box-shadow: 0 0 15px #ff0000; color: #ff5555; }
+    </style>
+</head>
+<body>
+    <div class="terminal-box">
+        <h1>[ AEGIS-AI: OFFENSIVE MODULE ]</h1>
+        <form id="scanForm">
+            {% csrf_token %}
+            <div class="input-group">
+                <input type="text" name="target" id="targetInput" placeholder="Target IP" required>
+                <select name="scan_type" id="scanType">
+                    <option value="lab">LAB MODE</option>
+                    <option value="web">WEB AUDIT</option>
+                    <option value="top100">QUICK RECON</option>
+                    <option value="full">DEEP PENETRATION</option>
+                </select>
+                <button type="submit" id="execBtn">EXECUTE SCAN</button>
+            </div>
+        </form>
+        <div id="loader">[*] EXECUTING PENTEST PIPELINE...</div>
+        <div id="resultsArea" style="display:none;">
+            <h3>LIVE RECON DATA:</h3>
+            <pre id="outputBox"></pre>
+        </div>
+    </div>
+
+    <div class="terminal-box defense-box">
+        <h2 style="color: #ff0000;">[ AEGIS-AI: DEFENSIVE MONITOR ]</h2>
+        <div id="trafficBox" style="height: 200px; overflow-y: auto; font-size: 12px;">
+            >>> INITIALIZING PACKET SNIFFER...
+        </div>
+    </div>
+
+    <script>
+        // OFFENSIVE SCAN SCRIPT
+        document.getElementById('scanForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('execBtn');
+            const loader = document.getElementById('loader');
+            const output = document.getElementById('outputBox');
+            const resultsArea = document.getElementById('resultsArea');
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+            resultsArea.style.display = 'none';
+
+            const formData = new FormData(e.target);
+            try {
+                const response = await fetch('', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                });
+                const data = await response.json();
+                loader.style.display = 'none';
+                btn.disabled = false;
+                resultsArea.style.display = 'block';
+                output.textContent = data.results;
+            } catch (error) {
+                alert("Scan failed.");
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        };
+
+        // DEFENSIVE TRAFFIC SCRIPT
+        setInterval(async () => {
+            try {
+                const response = await fetch('/live-traffic/');
+                const data = await response.json();
+                const trafficBox = document.getElementById('trafficBox');
+                
+                if (data.traffic.length > 0) {
+                    let html = "";
+                    data.traffic.forEach(p => {
+                        const time = p.timestamp.split('T')[1].split('.')[0];
+                        html += `[${time}] ALERT: Traffic from ${p.source} -> ${p.size} bytes<br>`;
+                    });
+                    trafficBox.innerHTML = html;
+                    trafficBox.scrollTop = trafficBox.scrollHeight;
+                }
+            } catch (e) { console.log("Polling..."); }
+        }, 2000);
+    </script>
+</body>
+</html>
