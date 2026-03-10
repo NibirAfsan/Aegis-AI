@@ -1,68 +1,79 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-import nmap
 from .models import ScanResult
+from core.aegis_scanner import UnifiedAegisEngine
 import json
 import os
 
 def home(request):
     if request.method == "POST":
-        target = request.POST.get('target')
-        scan_type = request.POST.get('scan_type')
+        target = request.POST.get('target', 'host.docker.internal')
+        scan_type = request.POST.get('scan_type', 'lab')
         
-        nm = nmap.PortScanner()
+        engine = UnifiedAegisEngine(target)
+        
+        # --- Mapping Buttons to REAL Nmap Logic ---
+        # Default flags for all scans
+        args = '-sV --script=vuln -Pn'
         
         if scan_type == "lab":
-            nm.scan(target, '8081-8083', '-sV --script=vuln -Pn')
+            ports = '8081-8083'
         elif scan_type == "web":
-            nm.scan(target, '21,22,80,443', '-sV --script=vuln -Pn')
+            ports = '80,443,8080,8081' 
         elif scan_type == "top100":
-            nm.scan(target, arguments='--top-ports 100 -sV -Pn')
+            ports = None  # Uses Nmap's internal list
+            args = '--top-ports 100 -sV --script=vuln -Pn'
+        else: # Full Deep Penetration
+            ports = '1-65535'
+            args = '-sV --script=vuln -Pn -T4' # Speed optimized for 65k ports
+
+        # Execute the full pipeline
+        engine.run_nmap(ports, args=args)
+        engine.run_web_discovery()
+        engine.run_osint()
+        engine.check_compliance()
+
+        # Format the Integrated Report
+        report = f"--- [ AEGIS-AI: MISSION INTELLIGENCE REPORT ] ---\n"
+        report += f"MISSION: {scan_type.upper()} | TARGET: {target}\n"
+        report += "----------------------------------------------\n\n"
+        
+        report += "[+] NETWORK RECONNAISSANCE (NMAP):\n"
+        report += engine.results["nmap_raw"] + "\n"
+        
+        report += "[!] WEB DIRECTORY AUDIT:\n"
+        if engine.results["web_discovery"]:
+            report += " " + "\n ".join(engine.results["web_discovery"]) + "\n\n"
         else:
-            nm.scan(target, '1-65535', '-sV -T4 -Pn')
+            report += " No sensitive directories found on tested ports.\n\n"
+        
+        report += "[?] OSINT / DATA LEAK ANALYSIS (SIMULATED):\n"
+        report += " " + "\n ".join(engine.results["osint"]) + "\n\n"
+        
+        report += "[§] REGULATORY COMPLIANCE STATUS:\n"
+        report += " " + "\n ".join(engine.results["compliance"]) + "\n\n"
 
-        results_str = f"--- [PRO SCAN COMPLETED] ---\n"
-        for host in nm.all_hosts():
-            results_str += f"Target: {host} ({nm[host].hostname()})\n"
-            for proto in nm[host].all_protocols():
-                for port in nm[host][proto].keys():
-                    state = nm[host][proto][port]['state']
-                    service = nm[host][proto][port].get('name', 'unknown')
-                    product = nm[host][proto][port].get('product', '')
-                    ver_num = nm[host][proto][port].get('version', '')
-                    version_full = f"{product} {ver_num}".strip()
-                    
-                    results_str += f" Port {port} [{service.upper()}]: {state}\n"
-                    if version_full:
-                        results_str += f"   -> Version: {version_full}\n"
+        report += "[BRAIN] GEN-AI ATTACK STRATEGY (PREVIEW):\n"
+        if "CRITICAL VULNERABILITIES" in engine.results["nmap_raw"]:
+            report += " > [CRITICAL] Real vulnerabilities detected. Ready for exploit generation.\n"
+        else:
+            report += " > No direct vulnerabilities found. Recommend further social engineering.\n"
 
-                    if 'script' in nm[host][proto][port]:
-                        results_str += "   [!!!] SECURITY FINDINGS DETECTED:\n"
-                        for script_id, output in nm[host][proto][port]['script'].items():
-                            clean_output = output.replace('\n', '\n       ')
-                            results_str += f"       - {script_id}: {clean_output}\n"
+        # Save to Database
+        ScanResult.objects.create(target=target, scan_mode=scan_type, raw_data=report)
 
-        ScanResult.objects.create(
-            target=target,
-            scan_mode=scan_type,
-            raw_data=results_str
-        )
-
-        return JsonResponse({'status': 'success', 'results': results_str})
+        return JsonResponse({'status': 'success', 'results': report})
 
     return render(request, 'scanner_ui/index.html')
 
-# This MUST be outside the home function!
 def get_live_traffic(request):
     log_file = 'network_evidence.json'
     if not os.path.exists(log_file):
         return JsonResponse({'traffic': []})
-    
     try:
         with open(log_file, 'r') as f:
             lines = f.readlines()
-            # We take the last 10 lines (packets)
             last_10 = [json.loads(line) for line in lines[-10:]]
         return JsonResponse({'traffic': last_10})
-    except Exception:
+    except:
         return JsonResponse({'traffic': []})

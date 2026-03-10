@@ -13,28 +13,30 @@
         pre { background: #050505; border-left: 3px solid #00ff00; padding: 15px; overflow-x: auto; white-space: pre-wrap; font-size: 14px; min-height: 50px; }
         #loader { color: yellow; display: none; margin: 10px 0; }
         .defense-box { border: 1px solid #ff0000; box-shadow: 0 0 15px #ff0000; color: #ff5555; }
+        .attack-btn { background: #ff0000; color: #fff; margin-top: 20px; display: none; border: 1px solid white; }
     </style>
 </head>
 <body>
     <div class="terminal-box">
-        <h1>[ AEGIS-AI: OFFENSIVE MODULE ]</h1>
+        <h1>[ AEGIS-AI: UNIFIED OFFENSIVE ENGINE ]</h1>
         <form id="scanForm">
             {% csrf_token %}
             <div class="input-group">
-                <input type="text" name="target" id="targetInput" placeholder="Target IP" required>
+                <input type="text" name="target" id="targetInput" value="host.docker.internal" required>
                 <select name="scan_type" id="scanType">
-                    <option value="lab">LAB MODE</option>
-                    <option value="web">WEB AUDIT</option>
-                    <option value="top100">QUICK RECON</option>
-                    <option value="full">DEEP PENETRATION</option>
+                    <option value="lab">LAB AUDIT (8081-8083)</option>
+                    <option value="web">WEB AUDIT (80, 443 + DIRS)</option>
+                    <option value="top100">QUICK RECON (TOP 100 PORTS)</option>
+                    <option value="full">DEEP PENETRATION (1-65535 PORTS)</option>
                 </select>
-                <button type="submit" id="execBtn">EXECUTE SCAN</button>
+                <button type="submit" id="execBtn">INITIATE MISSION</button>
             </div>
         </form>
-        <div id="loader">[*] EXECUTING PENTEST PIPELINE...</div>
+        <div id="loader">[*] ORCHESTRATING FULL-SPECTRUM PIPELINE... (NMAP + OSINT + WEB AUDIT)</div>
         <div id="resultsArea" style="display:none;">
-            <h3>LIVE RECON DATA:</h3>
+            <h3 style="color: yellow;">[ MISSION INTELLIGENCE REPORT ]</h3>
             <pre id="outputBox"></pre>
+            <button class="attack-btn" id="attackBtn" onclick="alert('System Offline: GenAI Brain not yet connected.')">EXECUTE BREACH SEQUENCE</button>
         </div>
     </div>
 
@@ -46,13 +48,13 @@
     </div>
 
     <script>
-        // OFFENSIVE SCAN SCRIPT
         document.getElementById('scanForm').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('execBtn');
             const loader = document.getElementById('loader');
             const output = document.getElementById('outputBox');
             const resultsArea = document.getElementById('resultsArea');
+            const attackBtn = document.getElementById('attackBtn');
 
             btn.disabled = true;
             loader.style.display = 'block';
@@ -70,30 +72,36 @@
                 btn.disabled = false;
                 resultsArea.style.display = 'block';
                 output.textContent = data.results;
+                
+                // FIXED: Matches the "CRITICAL VULNERABILITIES" string in the scanner output
+                if(data.results.includes("CRITICAL VULNERABILITIES")) {
+                    attackBtn.style.display = 'block';
+                } else {
+                    attackBtn.style.display = 'none';
+                }
             } catch (error) {
-                alert("Scan failed.");
+                alert("Mission Aborted: Connection Error");
                 btn.disabled = false;
                 loader.style.display = 'none';
             }
         };
 
-        // DEFENSIVE TRAFFIC SCRIPT
+        // Live Traffic Polling
         setInterval(async () => {
             try {
                 const response = await fetch('/live-traffic/');
                 const data = await response.json();
                 const trafficBox = document.getElementById('trafficBox');
-                
-                if (data.traffic.length > 0) {
+                if (data.traffic && data.traffic.length > 0) {
                     let html = "";
                     data.traffic.forEach(p => {
-                        const time = p.timestamp.split('T')[1].split('.')[0];
+                        const time = p.timestamp ? p.timestamp.split('T')[1].split('.')[0] : "00:00:00";
                         html += `[${time}] ALERT: Traffic from ${p.source} -> ${p.size} bytes<br>`;
                     });
                     trafficBox.innerHTML = html;
                     trafficBox.scrollTop = trafficBox.scrollHeight;
                 }
-            } catch (e) { console.log("Polling..."); }
+            } catch (e) {}
         }, 2000);
     </script>
 </body>
