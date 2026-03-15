@@ -27,6 +27,8 @@ def home(request):
         # Execute Pipeline
         engine.run_nmap(ports, stealth=stealth_enabled)
         engine.run_web_audit()
+        engine.detect_web_stack()
+        engine.run_ssl_osint()  
         engine.run_osint()
         engine.check_compliance()
 
@@ -41,6 +43,9 @@ def home(request):
         
         report += "[!] WEB DIRECTORY AUDIT:\n "
         report += "\n ".join(engine.results["web_discovery"]) if engine.results["web_discovery"] else "No leaks found.\n"
+        
+        report += "[*] TECHNOLOGY STACK:\n "
+        report += "\n ".join(engine.results["tech_stack"]) if engine.results["tech_stack"] else "No specific stack detected.\n"
         
         report += "\n[?] OSINT & COMPLIANCE:\n "
         report += "\n ".join(engine.results["osint"] + engine.results["compliance"]) + "\n\n"
