@@ -1,3 +1,36 @@
-python-nmap
-requests
-django
+# AEGIS Framework — requirements.txt
+# Install: pip install -r requirements.txt
+
+# Core Django
+Django==4.2.11
+# psycopg2-binary==2.9.9  # uncomment when switching to PostgreSQL
+
+# Scanning
+python-nmap==0.7.1
+requests==2.31.0
+urllib3==2.1.0
+
+# Network / forensics
+scapy==2.5.0
+
+# Async task queue
+celery==5.3.6
+redis==5.0.3
+django-celery-results==2.5.1
+celery-progress==0.3
+flower==2.0.1
+
+# Attack tools — Phase 3
+pymetasploit3==1.0.3
+
+# Reporting
+reportlab==4.1.0
+markdown==3.5.2
+python-dotenv==1.0.1
+
+# GenAI — uncomment when you have a key
+# anthropic==0.25.0
+# google-generativeai==0.5.4
+
+# Production server
+gunicorn==21.2.0

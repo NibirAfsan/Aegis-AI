@@ -1,29 +1,62 @@
+"""
+AEGIS core/aegis_scanner.py
+============================
+Full scanning engine. Each method wraps one tool and writes into
+self.results — a structured dict, not a raw text blob.
+
+Tools:
+  run_nmap()           port scan + service versions + vuln scripts
+  run_web_audit()      parallel HTTP probe of sensitive paths
+  detect_web_stack()   fingerprint CMS, framework, security headers
+  run_ssl_osint()      pull certificate info and SANs
+  run_theharvester()   email / subdomain OSINT
+  run_gobuster()       directory and file brute-force
+  run_nuclei()         template-based CVE / misconfiguration scanning
+  run_zap_scan()       OWASP ZAP active DAST scan
+  check_compliance()   flag plaintext services, missing headers, exposed DBs
+"""
+
 import socket
 import nmap
 import requests
 import ssl
+import subprocess
+import json
 import concurrent.futures
+import warnings
+import os
+
+warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 
 
 class UnifiedAegisEngine:
 
-    def __init__(self, target):
+    def __init__(self, target: str):
         self.target = target
-
         self.results = {
-            "nmap_raw": "",
+            "nmap_raw":      "",
             "web_discovery": [],
-            "osint": [],
-            "compliance": [],
-            "tech_stack": []
+            "tech_stack":    [],
+            "osint":         [],
+            "harvester":     [],
+            "gobuster":      [],
+            "nuclei":        [],
+            "zap":           [],
+            "compliance":    [],
         }
 
-    # ------------------------------------------------
-    # NMAP SCANNER
-    # ------------------------------------------------
+    # =========================================================================
+    # NMAP
+    # =========================================================================
 
     def run_nmap(self, ports="1-1000", stealth=False):
-
+        """
+        Port scan + service version detection + vuln scripts.
+        -sV   = detect software versions on open ports
+        --script=vuln = run all nmap vulnerability scripts
+        -Pn   = skip ping (important for firewalled hosts in Docker)
+        -T2   = slow/stealthy   -T4 = fast/loud
+        """
         nm = nmap.PortScanner()
 
         try:
@@ -32,261 +65,485 @@ class UnifiedAegisEngine:
             target_host = self.target
 
         timing = "-T2" if stealth else "-T4"
-
-        args = f"-sV --script=vuln {timing} -Pn"
+        args   = f"-sV --script=vuln {timing} -Pn"
+        if stealth:
+            args += " -sS"
 
         try:
-
             nm.scan(target_host, ports=ports, arguments=args)
-
             report = ""
 
             if not nm.all_hosts():
-                report = "[!] Target unreachable or blocking scan\n"
+                self.results["nmap_raw"] = "[!] Target unreachable or blocking scan"
+                return
 
             for host in nm.all_hosts():
-
-                report += f"\nTarget: {host} ({nm[host].hostname()})\n"
+                report += f"\nHost : {host} ({nm[host].hostname()})\n"
+                report += f"State: {nm[host].state()}\n"
 
                 for proto in nm[host].all_protocols():
-
-                    ports_found = nm[host][proto].keys()
-
-                    for port in sorted(ports_found):
-
+                    for port in sorted(nm[host][proto].keys()):
                         data = nm[host][proto][port]
-
-                        state = data.get("state")
-
-                        if state != "open":
+                        if data.get("state") != "open":
                             continue
 
                         service = data.get("name", "unknown").upper()
-
                         version = f"{data.get('product','')} {data.get('version','')}".strip()
 
-                        report += f"\n Port {port} [{service}] : OPEN\n"
-
+                        report += f"\n  Port {port}/{proto}  [{service}]  OPEN\n"
                         if version:
-                            report += f"  VERSION: {version}\n"
+                            report += f"    Version : {version}\n"
 
                         if "script" in data:
-
                             for script, output in data["script"].items():
-
-                                lower = output.lower()
-
-                                if "not vulnerable" in lower:
+                                low = output.lower()
+                                if "not vulnerable" in low:
                                     continue
-
-                                if "cve-" in lower or "vulnerable" in lower:
-
-                                    report += f"  [!!!] VULNERABILITY: {script}\n"
-
+                                if "cve-" in low or "vulnerable" in low:
+                                    report += f"    [!!!] VULN: {script}\n"
                                     for line in output.split("\n"):
-
-                                        if "CVE-" in line:
-                                            report += f"      {line.strip()}\n"
-
+                                        if any(k in line for k in ["CVE-", "State:", "IDs:"]):
+                                            report += f"          {line.strip()}\n"
                                 else:
+                                    info = (output.splitlines()[0] if output else "")[:80]
+                                    if info:
+                                        report += f"    [+] {script}: {info}\n"
 
-                                    info = output.splitlines()[0] if output else ""
-
-                                    report += f"  [+] INFO: {script} -> {info[:60]}\n"
-
-            self.results["nmap_raw"] = report if report else "No open ports discovered."
+            self.results["nmap_raw"] = report or "No open ports found."
 
         except Exception as e:
+            self.results["nmap_raw"] = f"[ENGINE ERROR] {e}"
 
-            self.results["nmap_raw"] = f"[ENGINE ERROR] {str(e)}"
+    # =========================================================================
+    # WEB AUDIT — parallel HTTP probe
+    # =========================================================================
 
-    # ------------------------------------------------
-    # WEB AUDIT (PARALLEL)
-    # ------------------------------------------------
-
-    def check_path(self, port, path):
-
+    def _check_path(self, port: int, path: str):
         scheme = "https" if port == 443 else "http"
-
-        url = f"{scheme}://{self.target}:{port}{path}"
-
-        headers = {
-            "User-Agent": "AegisScanner/1.0"
-        }
-
+        url    = f"{scheme}://{self.target}:{port}{path}"
         try:
-
             r = requests.get(
                 url,
-                headers=headers,
+                headers={"User-Agent": "Mozilla/5.0 (AegisScanner/2.0)"},
                 timeout=3,
                 allow_redirects=False,
-                verify=False
+                verify=False,
             )
-
-            if r.status_code == 200:
-                return f"[!!!] EXPOSED RESOURCE: {url}"
-
+            if r.status_code in [200, 301, 302, 401, 403]:
+                return f"[HTTP {r.status_code}] {url}  ({len(r.content)} bytes)"
         except Exception:
             return None
 
     def run_web_audit(self):
-
-        findings = []
-
-        web_ports = [80, 443, 8080, 8081, 8082]
-
+        """
+        Parallel probe of ~35 high-value paths across common web ports.
+        Catches exposed .env files, admin panels, git repos, backups, etc.
+        """
         paths = [
-            "/.env",
-            "/admin",
-            "/backup",
-            "/.git",
-            "/.git/config",
-            "/backup.sql",
-            "/config.php",
-            "/uploads",
-            "/api",
-            "/phpmyadmin"
+            "/.env", "/.env.bak", "/.env.local", "/.env.production",
+            "/.git", "/.git/config", "/.git/HEAD",
+            "/admin", "/admin/", "/administrator", "/wp-admin",
+            "/backup", "/backup.zip", "/backup.sql", "/backup.tar.gz",
+            "/config.php", "/config.yml", "/config.json",
+            "/uploads", "/upload",
+            "/api", "/api/v1", "/api/v2", "/swagger", "/swagger-ui.html",
+            "/phpmyadmin", "/pma",
+            "/wp-config.php", "/wp-content",
+            "/server-status", "/server-info",
+            "/.htpasswd", "/.htaccess",
+            "/robots.txt", "/sitemap.xml",
+            "/debug", "/console",
+            "/actuator", "/actuator/env", "/actuator/health",
         ]
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        ports   = [80, 443, 8080, 8081, 8082, 8443]
+        results = []
 
-            futures = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ex:
+            futures = {
+                ex.submit(self._check_path, p, path): (p, path)
+                for p in ports for path in paths
+            }
+            for fut in concurrent.futures.as_completed(futures):
+                r = fut.result()
+                if r:
+                    results.append(r)
 
-            for port in web_ports:
-                for path in paths:
+        self.results["web_discovery"] = results
 
-                    futures.append(
-                        executor.submit(self.check_path, port, path)
-                    )
-
-            for future in futures:
-
-                result = future.result()
-
-                if result:
-                    findings.append(result)
-
-        self.results["web_discovery"] = findings
-
-    # ------------------------------------------------
-    # WEB TECHNOLOGY DETECTION
-    # ------------------------------------------------
+    # =========================================================================
+    # TECHNOLOGY FINGERPRINT
+    # =========================================================================
 
     def detect_web_stack(self):
-
-        technologies = []
-
-        urls = [
-            f"http://{self.target}",
-            f"https://{self.target}"
+        findings = []
+        cms_sigs = {
+            "wp-content":  "WordPress",
+            "wp-json":     "WordPress (REST API exposed)",
+            "laravel":     "Laravel",
+            "django":      "Django",
+            "react":       "React",
+            "angular":     "Angular",
+            "vue.js":      "Vue.js",
+            "joomla":      "Joomla",
+            "drupal":      "Drupal",
+            "magento":     "Magento",
+        }
+        sec_headers = [
+            "Strict-Transport-Security",
+            "X-Frame-Options",
+            "X-Content-Type-Options",
+            "Content-Security-Policy",
+            "Referrer-Policy",
         ]
 
-        for url in urls:
-
+        for port in [80, 443, 8080, 8081, 8082]:
+            scheme = "https" if port == 443 else "http"
             try:
-
-                r = requests.get(url, timeout=4, verify=False)
-
-                headers = r.headers
-
-                server = headers.get("Server", "")
-
-                powered = headers.get("X-Powered-By", "")
-
-                if server:
-                    technologies.append(f"Server: {server}")
-
-                if powered:
-                    technologies.append(f"X-Powered-By: {powered}")
-
+                r = requests.get(
+                    f"{scheme}://{self.target}:{port}",
+                    timeout=4, verify=False,
+                    headers={"User-Agent": "Mozilla/5.0"},
+                )
+                h    = r.headers
                 html = r.text.lower()
 
-                if "wp-content" in html:
-                    technologies.append("WordPress detected")
+                if srv := h.get("Server"):
+                    findings.append(f"Server: {srv}  (port {port})")
+                if px := h.get("X-Powered-By"):
+                    findings.append(f"X-Powered-By: {px}  (port {port})")
 
-                if "laravel" in html:
-                    technologies.append("Laravel detected")
+                for sig, name in cms_sigs.items():
+                    if sig in html:
+                        findings.append(f"{name} detected  (port {port})")
 
-                if "django" in html:
-                    technologies.append("Django detected")
-
-                if "react" in html:
-                    technologies.append("React detected")
+                missing = [hdr for hdr in sec_headers if hdr not in h]
+                if missing:
+                    findings.append(
+                        f"[SECURITY] Missing headers on port {port}: {', '.join(missing)}"
+                    )
 
             except Exception:
                 continue
 
-        self.results["tech_stack"] = technologies
+        self.results["tech_stack"] = findings or ["No web stack detected"]
 
-    # ------------------------------------------------
+    # =========================================================================
     # SSL OSINT
-    # ------------------------------------------------
+    # =========================================================================
 
     def run_ssl_osint(self):
-
+        """Grab cert metadata — issuer, CN, SANs (hidden subdomains), expiry."""
         try:
-
             ctx = ssl.create_default_context()
-
-            with ctx.wrap_socket(
-                socket.socket(),
-                server_hostname=self.target
-            ) as s:
-
+            with ctx.wrap_socket(socket.socket(), server_hostname=self.target) as s:
                 s.settimeout(4)
-
                 s.connect((self.target, 443))
-
                 cert = s.getpeercert()
 
-                subject = dict(x[0] for x in cert["subject"])
+            subj   = dict(x[0] for x in cert["subject"])
+            issuer = dict(x[0] for x in cert["issuer"])
 
-                issuer = dict(x[0] for x in cert["issuer"])
-
-                self.results["osint"].append(
-                    f"SSL Issuer: {issuer.get('organizationName','Unknown')}"
-                )
-
-                self.results["osint"].append(
-                    f"SSL Common Name: {subject.get('commonName','Unknown')}"
-                )
+            self.results["osint"] += [
+                f"SSL Issuer   : {issuer.get('organizationName', 'Unknown')}",
+                f"SSL CN       : {subj.get('commonName', 'Unknown')}",
+                f"SSL Expires  : {cert.get('notAfter', '')}",
+            ]
+            for san_type, val in cert.get("subjectAltName", []):
+                if san_type == "DNS":
+                    self.results["osint"].append(f"SSL SAN (subdomain): {val}")
 
         except Exception:
             pass
 
-    # ------------------------------------------------
-    # SIMPLE EMAIL OSINT
-    # ------------------------------------------------
+    # =========================================================================
+    # theHarvester — email / subdomain OSINT
+    # =========================================================================
 
-    def run_osint(self):
+    def run_theharvester(self, limit: int = 50):
+        """
+        Finds emails, subdomains, IPs from public sources.
+        Most useful against real domain names (e.g. target.com).
+        Install: apt install theharvester
+        """
+        findings = []
+        out_file = f"/tmp/harv_{self.target.replace('.','_')}"
 
-        self.results["osint"].append(
-            f"Possible admin email: admin@{self.target}"
-        )
+        try:
+            subprocess.run(
+                [
+                    "theHarvester",
+                    "-d", self.target,
+                    "-b", "bing,urlscan,hackertarget,dnsdumpster",
+                    "-l", str(limit),
+                    "-f", out_file,
+                ],
+                capture_output=True, text=True, timeout=60,
+            )
 
-    # ------------------------------------------------
+            json_path = f"{out_file}.json"
+            if os.path.exists(json_path):
+                with open(json_path) as f:
+                    data = json.load(f)
+                for email in data.get("emails", [])[:20]:
+                    findings.append(f"[EMAIL]     {email}")
+                for host in data.get("hosts", [])[:20]:
+                    findings.append(f"[SUBDOMAIN] {host}")
+                for ip in data.get("ips", [])[:10]:
+                    findings.append(f"[IP]        {ip}")
+
+        except FileNotFoundError:
+            findings.append("[SKIP] theHarvester not installed (apt install theharvester)")
+        except subprocess.TimeoutExpired:
+            findings.append("[TIMEOUT] theHarvester exceeded 60s")
+        except Exception as e:
+            findings.append(f"[ERROR] theHarvester: {e}")
+
+        self.results["harvester"] = findings or ["[INFO] No OSINT data found"]
+        self.results["osint"].extend(findings)
+
+    # =========================================================================
+    # Gobuster — directory / file discovery
+    # =========================================================================
+
+    def run_gobuster(self, port: int = None):
+        """
+        Brute-forces directories and files using a wordlist.
+        Finds /backup_2019/, /old_admin/, /.env.prod etc.
+        Install: apt install gobuster wordlists
+        """
+        if port is None:
+            port = self._detect_web_port()
+
+        scheme   = "https" if port == 443 else "http"
+        url      = f"{scheme}://{self.target}:{port}"
+        findings = []
+
+        wordlists = [
+            "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt",
+            "/usr/share/wordlists/dirb/common.txt",
+            "/usr/share/seclists/Discovery/Web-Content/common.txt",
+        ]
+        wordlist = next((w for w in wordlists if os.path.exists(w)), None)
+
+        if not wordlist:
+            self.results["gobuster"] = [
+                "[SKIP] No wordlist found. Run: apt install wordlists"
+            ]
+            return
+
+        try:
+            result = subprocess.run(
+                [
+                    "gobuster", "dir",
+                    "-u", url,
+                    "-w", wordlist,
+                    "-t", "30",
+                    "-q",
+                    "--no-error",
+                    "--timeout", "10s",
+                    "-s", "200,204,301,302,307,401,403",
+                    "-x", "php,html,txt,bak,sql,zip,xml",
+                ],
+                capture_output=True, text=True, timeout=180,
+            )
+            for line in result.stdout.splitlines():
+                line = line.strip()
+                if line and not line.startswith("="):
+                    findings.append(line)
+
+        except FileNotFoundError:
+            findings.append("[SKIP] Gobuster not installed (apt install gobuster)")
+        except subprocess.TimeoutExpired:
+            findings.append("[TIMEOUT] Gobuster exceeded 3 minutes")
+        except Exception as e:
+            findings.append(f"[ERROR] Gobuster: {e}")
+
+        self.results["gobuster"] = findings or ["[INFO] No paths found by Gobuster"]
+
+    # =========================================================================
+    # Nuclei — template-based CVE / misconfiguration scanning
+    # =========================================================================
+
+    def run_nuclei(self):
+        """
+        Runs 7000+ community templates — finds CVEs, default creds,
+        exposed panels, CORS issues, and much more.
+        Install: apt install nuclei  then: nuclei -update-templates
+        """
+        port     = self._detect_web_port()
+        scheme   = "https" if port == 443 else "http"
+        url      = f"{scheme}://{self.target}:{port}"
+        findings = []
+
+        try:
+            result = subprocess.run(
+                [
+                    "nuclei",
+                    "-u", url,
+                    "-t", "cves/",
+                    "-t", "exposures/",
+                    "-t", "misconfigurations/",
+                    "-t", "default-logins/",
+                    "-severity", "medium,high,critical",
+                    "-jsonl",
+                    "-silent",
+                    "-timeout", "5",
+                    "-rate-limit", "50",
+                ],
+                capture_output=True, text=True, timeout=300,
+            )
+
+            for line in result.stdout.splitlines():
+                try:
+                    f        = json.loads(line)
+                    severity = f.get("info", {}).get("severity", "info").upper()
+                    name     = f.get("info", {}).get("name", "Unknown")
+                    matched  = f.get("matched-at", url)
+                    tid      = f.get("template-id", "")
+                    findings.append(f"[{severity}] {name}  —  {matched}  ({tid})")
+                except json.JSONDecodeError:
+                    if line.strip():
+                        findings.append(line.strip())
+
+        except FileNotFoundError:
+            findings.append("[SKIP] Nuclei not installed")
+        except subprocess.TimeoutExpired:
+            findings.append("[TIMEOUT] Nuclei exceeded 5 minutes")
+        except Exception as e:
+            findings.append(f"[ERROR] Nuclei: {e}")
+
+        self.results["nuclei"] = findings or ["[INFO] No findings from Nuclei"]
+
+    # =========================================================================
+    # OWASP ZAP — active web application DAST scanner
+    # =========================================================================
+
+    def run_zap_scan(self, port: int = None):
+        """
+        ZAP actively attacks the web app to find XSS, SQLi, CSRF,
+        insecure cookies, path traversal, open redirects, and more.
+
+        Requires ZAP running as a daemon:
+          docker run -d -p 8090:8080 owasp/zap2docker-stable \
+            zap.sh -daemon -host 0.0.0.0 -port 8080 \
+            -config api.key=aegis_zap_key
+
+        This is included in docker-compose.yml already.
+        """
+        if port is None:
+            port = self._detect_web_port()
+
+        scheme     = "https" if port == 443 else "http"
+        target_url = f"{scheme}://{self.target}:{port}"
+        findings   = []
+
+        ZAP_API = "http://localhost:8090"
+        ZAP_KEY = "aegis_zap_key"
+
+        try:
+            import time
+
+            # Step 1: Spider the target
+            spider_resp = requests.get(
+                f"{ZAP_API}/JSON/spider/action/scan/",
+                params={"url": target_url, "apikey": ZAP_KEY},
+                timeout=10,
+            )
+            spider_id = spider_resp.json().get("scan")
+
+            # Wait for spider to finish
+            for _ in range(40):
+                status = requests.get(
+                    f"{ZAP_API}/JSON/spider/view/status/",
+                    params={"scanId": spider_id, "apikey": ZAP_KEY},
+                    timeout=5,
+                ).json().get("status", "0")
+                if status == "100":
+                    break
+                time.sleep(3)
+
+            # Step 2: Active scan
+            scan_resp = requests.get(
+                f"{ZAP_API}/JSON/ascan/action/scan/",
+                params={"url": target_url, "apikey": ZAP_KEY},
+                timeout=10,
+            )
+            scan_id = scan_resp.json().get("scan")
+
+            for _ in range(60):
+                status = requests.get(
+                    f"{ZAP_API}/JSON/ascan/view/status/",
+                    params={"scanId": scan_id, "apikey": ZAP_KEY},
+                    timeout=5,
+                ).json().get("status", "0")
+                if status == "100":
+                    break
+                time.sleep(3)
+
+            # Step 3: Collect alerts
+            alerts = requests.get(
+                f"{ZAP_API}/JSON/alert/view/alerts/",
+                params={"baseurl": target_url, "apikey": ZAP_KEY},
+                timeout=10,
+            ).json().get("alerts", [])
+
+            for alert in alerts:
+                risk  = alert.get("risk", "Informational").upper()
+                name  = alert.get("alert", "Unknown")
+                url   = alert.get("url", target_url)
+                desc  = alert.get("description", "")[:120]
+                findings.append(f"[{risk}] {name}  —  {url}\n          {desc}")
+
+        except requests.exceptions.ConnectionError:
+            findings.append(
+                "[SKIP] ZAP daemon not running. It starts automatically via docker-compose."
+            )
+        except Exception as e:
+            findings.append(f"[ERROR] ZAP: {e}")
+
+        self.results["zap"] = findings or ["[INFO] No alerts from ZAP"]
+
+    # =========================================================================
     # COMPLIANCE CHECK
-    # ------------------------------------------------
+    # =========================================================================
 
     def check_compliance(self):
-
-        raw = self.results["nmap_raw"]
-
+        raw    = self.results["nmap_raw"]
+        tech   = " ".join(self.results["tech_stack"])
         issues = []
 
-        if "FTP" in raw:
-            issues.append("Unencrypted FTP service")
+        if "FTP"    in raw: issues.append("Unencrypted FTP (use SFTP/FTPS)")
+        if "TELNET" in raw: issues.append("Telnet exposed (use SSH)")
+        if "HTTP"   in raw and "443" not in raw:
+            issues.append("Plaintext HTTP with no HTTPS")
 
-        if "HTTP" in raw and "HTTPS" not in raw:
-            issues.append("Plaintext HTTP service")
+        if "Missing headers" in tech:
+            issues.append("Security headers missing (CSP, HSTS, X-Frame-Options)")
 
-        if issues:
+        exposed = {
+            "3306":  "MySQL exposed to network",
+            "5432":  "PostgreSQL exposed to network",
+            "27017": "MongoDB exposed to network",
+            "6379":  "Redis exposed (likely unauthenticated)",
+            "9200":  "Elasticsearch exposed",
+            "2375":  "Docker API exposed — CRITICAL, full host takeover possible",
+        }
+        for p, msg in exposed.items():
+            if f"Port {p}" in raw:
+                issues.append(f"[CRITICAL] {msg}")
 
-            self.results["compliance"] = [
-                f"[ALERT] {', '.join(issues)}"
-            ]
+        self.results["compliance"] = (
+            [f"[ALERT] {i}" for i in issues] or ["No compliance issues detected"]
+        )
 
-        else:
+    # =========================================================================
+    # HELPER
+    # =========================================================================
 
-            self.results["compliance"] = ["No compliance issues detected"]
+    def _detect_web_port(self) -> int:
+        nmap_text = self.results.get("nmap_raw", "")
+        for port in [80, 443, 8080, 8081, 8082]:
+            if f"Port {port}" in nmap_text:
+                return port
+        return 80
