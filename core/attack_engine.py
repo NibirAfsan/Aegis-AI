@@ -141,7 +141,13 @@ class AttackOrchestrator:
             if payload:
                 exploit['PAYLOAD'] = payload
 
-            job    = exploit.execute(payload=payload if payload else None)
+            job = exploit.execute(payload=payload if payload else None)
+            if not isinstance(job, dict):
+                return {
+                    "success": False,
+                    "output":  f"Module failed to execute. Module: {module}",
+                    "module":  module
+                }
             job_id = job.get('job_id')
 
             for _ in range(30):
@@ -399,7 +405,12 @@ class AttackOrchestrator:
                     timeout=30
                 )
                 output  = result.stdout[:2000] or result.stderr[:500]
-                success = result.returncode == 0 and len(output) > 10
+                # Better success check — look for actual sensitive content
+                success = (result.returncode == 0 
+                        and len(output) > 10
+                        and any(keyword in output.lower() 
+                                for keyword in ['api_key', 'password', 'secret', 'token', 
+                                                'database', 'db_pass', 'aws_', '=']))
                 return {
                     "success": success,
                     "output":  f"[EXECUTED]\n{output}",

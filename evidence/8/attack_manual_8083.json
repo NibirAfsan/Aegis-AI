@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T22:19:46.130336",
+  "target": "localhost",
+  "vulnerability": "Cross-Site Tracing (XST) via TRACE method enabled",
+  "tool": "manual",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "[EXECUTED]\nTRACE / HTTP/1.1\nHost: localhost:8083\nUser-Agent: curl/8.17.0\nAccept: */*\n\n",
+    "tool": "manual",
+    "command": "curl -X TRACE http://localhost:8083/",
+    "vulnerability": "Cross-Site Tracing (XST) via TRACE method enabled",
+    "port": 8083
+  }
+}

@@ -1,62 +1,43 @@
 """
 AEGIS core/tasks.py
 ====================
-Celery background tasks. Django fires these with .delay() and returns
-to the browser immediately. The browser polls /scan-status/<task_id>/
-every 3 seconds to get progress updates.
-
-WHY CELERY:
-  Without it: browser waits → nmap takes 20 min → browser times out → user sees nothing
-  With it:    browser gets task_id in 50ms → polls every 3s → sees live progress bar
-
-Start the worker (separate terminal):
-  celery -A aegis_web worker --loglevel=info
-
-Monitor tasks (Flower UI at http://localhost:5555):
-  celery -A aegis_web flower
+Celery background tasks: scan, attack, report.
+All three are async — browser polls for progress, never hangs.
 """
 
-"""
-AEGIS core/tasks.py
-====================
-Celery background tasks for scanning and attacking.
-"""
-
+import datetime
 from celery import shared_task
 from core.aegis_scanner import UnifiedAegisEngine
 from scanner_ui.models import ScanResult
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SCAN TASK
+# ─────────────────────────────────────────────────────────────────────────────
+
 @shared_task(bind=True)
 def run_full_scan(self, target: str, scan_type: str,
                   stealth: bool = False, run_zap: bool = False):
-    """Background scan task."""
-
-    def progress(pct: int, msg: str):
-        self.update_state(
-            state='PROGRESS',
-            meta={'current': pct, 'total': 100, 'message': msg}
-        )
+    def progress(pct, msg):
+        self.update_state(state='PROGRESS',
+                          meta={'current': pct, 'total': 100, 'message': msg})
 
     scan_record = None
-
     try:
         scan_record = ScanResult.objects.create(
-            target=target, scan_mode=scan_type, status='RUNNING',
-        )
+            target=target, scan_mode=scan_type, status='RUNNING')
 
         port_map = {
-            "lab":    "8081-8083",
+            "lab":    "8081-8083,2121,2222,3306,5432",
             "web":    None,
             "top100": "80,443,8080,22,21,25,53,110,143,3306,5432",
             "full":   "1-65535",
         }
-        ports  = port_map.get(scan_type)
         engine = UnifiedAegisEngine(target)
 
         progress(5,  "Initialising engine...")
         progress(10, "Running Nmap scan...")
-        engine.run_nmap(ports=ports, stealth=stealth)
+        engine.run_nmap(ports=port_map.get(scan_type), stealth=stealth)
 
         progress(30, "Running web directory audit...")
         engine.run_web_audit()
@@ -92,7 +73,6 @@ def run_full_scan(self, target: str, scan_type: str,
         scan_record.save()
 
         progress(100, "Scan complete.")
-
         return {"status": "COMPLETE", "scan_id": scan_record.id, "severity": severity}
 
     except Exception as e:
@@ -102,30 +82,22 @@ def run_full_scan(self, target: str, scan_type: str,
         raise e
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ATTACK TASK
+# ─────────────────────────────────────────────────────────────────────────────
+
 @shared_task(bind=True)
 def run_attack_task(self, scan_id: int):
-    """
-    Background attack task — fires from initiate_attack view.
-
-    Flow:
-      1. Load scan results from DB
-      2. Ask Gemini to generate attack plan
-      3. Execute plan with AttackOrchestrator
-      4. Save results + evidence to DB
-    """
-
-    def progress(pct: int, msg: str):
-        self.update_state(
-            state='PROGRESS',
-            meta={'current': pct, 'total': 100, 'message': msg}
-        )
+    def progress(pct, msg):
+        self.update_state(state='PROGRESS',
+                          meta={'current': pct, 'total': 100, 'message': msg})
 
     try:
         progress(5, "Loading scan results...")
         scan = ScanResult.objects.get(id=scan_id)
 
         if scan.status != 'COMPLETE':
-            return {"status": "ERROR", "message": "Scan must be complete before attacking"}
+            return {"status": "ERROR", "message": "Scan must be complete first"}
 
         progress(10, "AI analysing vulnerabilities and generating attack plan...")
 
@@ -138,26 +110,22 @@ def run_attack_task(self, scan_id: int):
         from core.attack_engine import AttackOrchestrator
         orchestrator = AttackOrchestrator(scan, attack_plan)
 
-        sequence = sorted(
-            attack_plan.get("attack_sequence", []),
-            key=lambda x: x.get("priority", 99)
-        )
+        sequence = sorted(attack_plan.get("attack_sequence", []),
+                          key=lambda x: x.get("priority", 99))
 
         attack_results = []
         for i, attack in enumerate(sequence):
-            pct = 30 + int((i / max(len(sequence), 1)) * 60)
-            vuln = attack.get('vulnerability', '')[:40]
+            pct  = 30 + int((i / max(len(sequence), 1)) * 60)
             tool = attack.get('tool', '?').upper()
+            vuln = attack.get('vulnerability', '')[:40]
             progress(pct, f"Executing: {tool} → {vuln}...")
 
             result = orchestrator._execute_single_attack(
-                attack, attack.get("tool", "manual")
-            )
+                attack, attack.get("tool", "manual"))
             attack_results.append(result)
 
         progress(95, "Saving evidence and results...")
 
-        import datetime
         execution_summary = {
             "status":      "COMPLETE",
             "target":      scan.target,
@@ -168,10 +136,11 @@ def run_attack_task(self, scan_id: int):
             "timestamp":   datetime.datetime.now().isoformat()
         }
 
-        raw_data = dict(scan.raw_data)
+        # FIX: reassign dict so Django detects the change
+        raw_data                   = dict(scan.raw_data)
         raw_data["attack_plan"]    = attack_plan
         raw_data["attack_results"] = execution_summary
-        scan.raw_data = raw_data
+        scan.raw_data              = raw_data
         scan.save()
 
         progress(100, "Attack sequence complete.")
@@ -185,10 +154,92 @@ def run_attack_task(self, scan_id: int):
         }
 
     except ScanResult.DoesNotExist:
-        return {"status": "ERROR", "message": f"Scan ID {scan_id} not found"}
+        return {"status": "ERROR", "message": f"Scan {scan_id} not found"}
     except Exception as e:
         return {"status": "ERROR", "message": str(e)}
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REPORT TASK — async so browser never hangs
+# ─────────────────────────────────────────────────────────────────────────────
+
+@shared_task(bind=True)
+def run_report_task(self, scan_id: int):
+    """
+    Generates both the pentest report and DFIR report in the background.
+    Browser polls /report-status/<task_id>/ every 5 seconds.
+    """
+    def progress(msg):
+        self.update_state(state='PROGRESS', meta={'message': msg})
+
+    try:
+        progress("Loading scan data...")
+        scan = ScanResult.objects.get(id=scan_id)
+
+        results        = scan.raw_data
+        attack_results = results.get("attack_results", {})
+
+        from core.ai_engine import generate_pentest_report, generate_dfir_report
+
+        progress("Writing executive summary and findings...")
+        pentest_report = generate_pentest_report(results, attack_results, scan.target)
+
+        dfir_report = ""
+        if attack_results.get("attacks_run", 0) > 0:
+            progress("Writing incident response report...")
+            from scanner_ui.models import ForensicEvidence
+            evidence_items = ForensicEvidence.objects.filter(scan=scan)
+            forensic_evidence = {
+                "items": [
+                    {"type": e.evidence_type, "file": e.file_path,
+                     "sha256": e.sha256_hash, "description": e.description,
+                     "timestamp": e.collected_at.isoformat()}
+                    for e in evidence_items
+                ],
+                "total": evidence_items.count()
+            }
+            dfir_report = generate_dfir_report(
+                results, attack_results, forensic_evidence, scan.target)
+
+        # Save to DB
+        progress("Saving report...")
+        scan.ai_report = pentest_report
+        scan.save()
+
+        # Generate PDF
+        progress("Generating PDF...")
+        pdf_available = False
+        try:
+            from scanner_ui.views import _generate_pdf
+            pdf_bytes = _generate_pdf(scan, pentest_report)
+            pdf_path  = f"evidence/{scan_id}/report_{scan_id}.pdf"
+            os.makedirs(f"evidence/{scan_id}", exist_ok=True)
+            with open(pdf_path, "wb") as f:
+                f.write(pdf_bytes)
+            pdf_available = True
+        except Exception:
+            pass   # PDF is optional — report still works without it
+
+        return {
+            "status":         "COMPLETE",
+            "scan_id":        scan_id,
+            "pentest_report": pentest_report,
+            "dfir_report":    dfir_report,
+            "pdf_available":  pdf_available,
+        }
+
+    except ScanResult.DoesNotExist:
+        return {"status": "ERROR", "message": f"Scan {scan_id} not found"}
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+
+import os
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HELPER
+# ─────────────────────────────────────────────────────────────────────────────
 
 def _calculate_severity(results: dict) -> str:
     nmap_text   = results.get("nmap_raw", "").lower()

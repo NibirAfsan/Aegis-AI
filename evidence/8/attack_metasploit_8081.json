@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T22:19:46.001226",
+  "target": "localhost",
+  "vulnerability": "Apache httpd 2.4.25 Remote Code Execution (RCE)",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/apache_httpd_rce_generic",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: 'bool' object is not subscriptable\nModule: exploit/multi/http/apache_httpd_rce_generic",
+    "module": "exploit/multi/http/apache_httpd_rce_generic",
+    "vulnerability": "Apache httpd 2.4.25 Remote Code Execution (RCE)",
+    "tool": "metasploit",
+    "port": 8081
+  }
+}
