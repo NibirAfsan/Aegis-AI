@@ -381,15 +381,62 @@ async function generateReport() {
 // ── Initiate attack ───────────────────────────────────────────────
 async function initiateAttack() {
     if (!currentScanId) return;
-    if (!confirm('Initiate breach sequence? (Lab environments only)')) return;
+    if (!confirm('Initiate AI-powered breach sequence?\n\nAI will analyse vulnerabilities and automatically select and execute the best attack tools.\n\nLab environments only.')) return;
 
-    const resp = await fetch('/initiate-attack/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({scan_id: currentScanId, attack_type: 'auto'})
-    });
-    const data = await resp.json();
-    alert(`${data.status}\n${data.message}`);
+    const attackBtn = document.getElementById('attackArea').querySelector('button');
+    attackBtn.textContent = 'AI PLANNING ATTACK...';
+    attackBtn.disabled = true;
+
+    document.getElementById('progressArea').style.display = 'block';
+    document.getElementById('progressFill').style.width   = '0%';
+    document.getElementById('progressMsg').textContent    = 'Sending scan results to AI...';
+
+    try {
+        const resp = await fetch('/initiate-attack/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({scan_id: currentScanId})
+        });
+        const data = await resp.json();
+
+        if (data.task_id) {
+            // Poll attack progress
+            const attackPoll = setInterval(async () => {
+                const sr = await fetch(`/attack-status/${data.task_id}/`);
+                const sd = await sr.json();
+
+                if (sd.state === 'PROGRESS') {
+                    document.getElementById('progressFill').style.width = sd.progress + '%';
+                    document.getElementById('progressMsg').textContent  = sd.message;
+
+                } else if (sd.state === 'SUCCESS') {
+                    clearInterval(attackPoll);
+                    document.getElementById('progressFill').style.width = '100%';
+                    document.getElementById('progressMsg').textContent  = 'Attack sequence complete!';
+                    attackBtn.textContent = 'BREACH COMPLETE — VIEW RESULTS';
+                    attackBtn.disabled    = false;
+
+                    // Reload results to show attack data
+                    await loadResults(currentScanId, null);
+                    alert(`Attack complete!\n\nAttacks run: ${sd.attacks_run}\nSuccessful: ${sd.successful}\n\n${sd.ai_summary}`);
+
+                } else if (sd.state === 'FAILURE') {
+                    clearInterval(attackPoll);
+                    showError('Attack failed: ' + sd.message);
+                    attackBtn.textContent = 'EXECUTE BREACH SEQUENCE';
+                    attackBtn.disabled    = false;
+                }
+            }, 3000);
+        } else {
+            showError(data.error || 'Failed to start attack');
+            attackBtn.textContent = 'EXECUTE BREACH SEQUENCE';
+            attackBtn.disabled    = false;
+        }
+    } catch (err) {
+        showError('Connection lost during attack');
+        attackBtn.textContent = 'EXECUTE BREACH SEQUENCE';
+        attackBtn.disabled    = false;
+    }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────

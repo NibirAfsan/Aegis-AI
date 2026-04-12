@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T07:04:58.661369",
+  "target": "localhost",
+  "vulnerability": "Apache HTTP Server 2.2.8 Remote Code Execution (CVE-2010-0425)",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/apache_2_2_8_chunked_encoding_rce",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: HTTPConnectionPool(host='localhost', port=55553): Max retries exceeded with url: /api/ (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x760aa71ab680>: Failed to establish a new connection: [Errno 111] Connection refused'))\nModule: exploit/multi/http/apache_2_2_8_chunked_encoding_rce",
+    "module": "exploit/multi/http/apache_2_2_8_chunked_encoding_rce",
+    "vulnerability": "Apache HTTP Server 2.2.8 Remote Code Execution (CVE-2010-0425)",
+    "tool": "metasploit",
+    "port": 8083
+  }
+}

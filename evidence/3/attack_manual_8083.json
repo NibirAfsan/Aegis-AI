@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T07:57:04.924834",
+  "target": "localhost",
+  "vulnerability": "Apache 2.2.8 Slowloris Denial of Service (CVE-2007-6750)",
+  "tool": "manual",
+  "module": "N/A",
+  "result": {
+    "success": null,
+    "output": "[MANUAL TESTING REQUIRED]\n\nVulnerability: Apache 2.2.8 Slowloris Denial of Service (CVE-2007-6750)\nPort: 8083\n\nSteps:\nslowloris.pl -dns localhost -port 8083 -sockets 500\n\nExpected outcome: Denial of Service, rendering the web service unavailable.\n\nFallback: N/A",
+    "tool": "manual",
+    "vulnerability": "Apache 2.2.8 Slowloris Denial of Service (CVE-2007-6750)",
+    "port": 8083
+  }
+}

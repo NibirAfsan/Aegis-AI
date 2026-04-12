@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T07:05:01.709332",
+  "target": "localhost",
+  "vulnerability": "Apache HTTP Server 2.4.25 Remote Code Execution (CVE-2024-38476, CVE-2024-38474, CVE-2023-25690 etc.)",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/apache_2_4_25_cve_2024_38476",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: HTTPConnectionPool(host='localhost', port=55553): Max retries exceeded with url: /api/ (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x760aa71aaf10>: Failed to establish a new connection: [Errno 111] Connection refused'))\nModule: exploit/multi/http/apache_2_4_25_cve_2024_38476",
+    "module": "exploit/multi/http/apache_2_4_25_cve_2024_38476",
+    "vulnerability": "Apache HTTP Server 2.4.25 Remote Code Execution (CVE-2024-38476, CVE-2024-38474, CVE-2023-25690 etc.)",
+    "tool": "metasploit",
+    "port": 8081
+  }
+}

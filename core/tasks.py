@@ -16,18 +16,21 @@ Monitor tasks (Flower UI at http://localhost:5555):
   celery -A aegis_web flower
 """
 
+"""
+AEGIS core/tasks.py
+====================
+Celery background tasks for scanning and attacking.
+"""
+
 from celery import shared_task
 from core.aegis_scanner import UnifiedAegisEngine
-from scanner_ui.models import ScanResult   # correct import for YOUR project
+from scanner_ui.models import ScanResult
 
 
 @shared_task(bind=True)
 def run_full_scan(self, target: str, scan_type: str,
                   stealth: bool = False, run_zap: bool = False):
-    """
-    Main background scan task.
-    bind=True gives us `self` so we can push progress updates.
-    """
+    """Background scan task."""
 
     def progress(pct: int, msg: str):
         self.update_state(
@@ -38,11 +41,8 @@ def run_full_scan(self, target: str, scan_type: str,
     scan_record = None
 
     try:
-        # Create DB record immediately so we have an ID to return
         scan_record = ScanResult.objects.create(
-            target=target,
-            scan_mode=scan_type,
-            status='RUNNING',
+            target=target, scan_mode=scan_type, status='RUNNING',
         )
 
         port_map = {
@@ -93,17 +93,101 @@ def run_full_scan(self, target: str, scan_type: str,
 
         progress(100, "Scan complete.")
 
-        return {
-            "status":   "COMPLETE",
-            "scan_id":  scan_record.id,
-            "severity": severity,
-        }
+        return {"status": "COMPLETE", "scan_id": scan_record.id, "severity": severity}
 
     except Exception as e:
         if scan_record:
             scan_record.status = 'FAILED'
             scan_record.save()
         raise e
+
+
+@shared_task(bind=True)
+def run_attack_task(self, scan_id: int):
+    """
+    Background attack task — fires from initiate_attack view.
+
+    Flow:
+      1. Load scan results from DB
+      2. Ask Gemini to generate attack plan
+      3. Execute plan with AttackOrchestrator
+      4. Save results + evidence to DB
+    """
+
+    def progress(pct: int, msg: str):
+        self.update_state(
+            state='PROGRESS',
+            meta={'current': pct, 'total': 100, 'message': msg}
+        )
+
+    try:
+        progress(5, "Loading scan results...")
+        scan = ScanResult.objects.get(id=scan_id)
+
+        if scan.status != 'COMPLETE':
+            return {"status": "ERROR", "message": "Scan must be complete before attacking"}
+
+        progress(10, "AI analysing vulnerabilities and generating attack plan...")
+
+        from core.ai_engine import generate_attack_plan
+        attack_plan = generate_attack_plan(scan.raw_data, scan.target)
+
+        num_attacks = len(attack_plan.get("attack_sequence", []))
+        progress(30, f"AI planned {num_attacks} attack vectors. Executing...")
+
+        from core.attack_engine import AttackOrchestrator
+        orchestrator = AttackOrchestrator(scan, attack_plan)
+
+        sequence = sorted(
+            attack_plan.get("attack_sequence", []),
+            key=lambda x: x.get("priority", 99)
+        )
+
+        attack_results = []
+        for i, attack in enumerate(sequence):
+            pct = 30 + int((i / max(len(sequence), 1)) * 60)
+            vuln = attack.get('vulnerability', '')[:40]
+            tool = attack.get('tool', '?').upper()
+            progress(pct, f"Executing: {tool} → {vuln}...")
+
+            result = orchestrator._execute_single_attack(
+                attack, attack.get("tool", "manual")
+            )
+            attack_results.append(result)
+
+        progress(95, "Saving evidence and results...")
+
+        import datetime
+        execution_summary = {
+            "status":      "COMPLETE",
+            "target":      scan.target,
+            "attacks_run": len(attack_results),
+            "successful":  sum(1 for r in attack_results if r.get("success")),
+            "results":     attack_results,
+            "evidence_dir": orchestrator.evidence_dir,
+            "timestamp":   datetime.datetime.now().isoformat()
+        }
+
+        raw_data = dict(scan.raw_data)
+        raw_data["attack_plan"]    = attack_plan
+        raw_data["attack_results"] = execution_summary
+        scan.raw_data = raw_data
+        scan.save()
+
+        progress(100, "Attack sequence complete.")
+
+        return {
+            "status":      "COMPLETE",
+            "scan_id":     scan_id,
+            "attacks_run": len(attack_results),
+            "successful":  execution_summary["successful"],
+            "ai_summary":  attack_plan.get("summary", "")
+        }
+
+    except ScanResult.DoesNotExist:
+        return {"status": "ERROR", "message": f"Scan ID {scan_id} not found"}
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
 
 
 def _calculate_severity(results: dict) -> str:

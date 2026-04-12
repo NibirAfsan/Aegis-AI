@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T07:40:33.629424",
+  "target": "localhost",
+  "vulnerability": "Critical Information Disclosure via Exposed Files",
+  "tool": "manual",
+  "module": "Exposed .env, .git, and backup files",
+  "result": {
+    "success": null,
+    "output": "[MANUAL TESTING REQUIRED]\n\nVulnerability: Critical Information Disclosure via Exposed Files\nPort: 8082\n\nSteps:\ncurl http://localhost:8082/.env -o .env && curl http://localhost:8082/.git/config -o .git_config && curl http://localhost:8082/backup.sql -o backup.sql\n\nExpected outcome: Database credentials, API keys, application secrets, source code, sensitive data\n\nFallback: N/A (files are confirmed accessible)",
+    "tool": "manual",
+    "vulnerability": "Critical Information Disclosure via Exposed Files",
+    "port": 8082
+  }
+}

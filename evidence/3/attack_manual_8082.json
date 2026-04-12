@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T07:55:04.701708",
+  "target": "localhost",
+  "vulnerability": "Exposed .git repository and sensitive .env files",
+  "tool": "manual",
+  "module": "N/A",
+  "result": {
+    "success": null,
+    "output": "[MANUAL TESTING REQUIRED]\n\nVulnerability: Exposed .git repository and sensitive .env files\nPort: 8082\n\nSteps:\ncurl http://localhost:8082/.env && curl http://localhost:8082/.git/config && curl http://localhost:8082/backup.sql\n\nExpected outcome: Extraction of sensitive credentials, API keys, source code, database dumps, leading to potential administrative access or further system compromise.\n\nFallback: N/A (direct information disclosure)",
+    "tool": "manual",
+    "vulnerability": "Exposed .git repository and sensitive .env files",
+    "port": 8082
+  }
+}

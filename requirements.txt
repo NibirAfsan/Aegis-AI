@@ -30,7 +30,7 @@ python-dotenv==1.0.1
 
 # GenAI — uncomment when you have a key
 # anthropic==0.25.0
-# google-generativeai==0.5.4
+google-generativeai==0.8.6
 
 # Production server
 gunicorn==21.2.0

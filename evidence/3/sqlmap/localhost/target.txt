@@ -1,0 +1,3 @@
+http://localhost:8083/phpMyAdmin/index.php (POST)  # /usr/bin/sqlmap -u http://localhost:8083/ --batch --level 3 --risk 2 --dbs --output-dir evidence/3/sqlmap --timeout 30 --forms --crawl 2
+
+phpMyAdmin=3df8c539932d6205f6d8abc3e3568f54bb4cbea5&phpMyAdmin=3df8c539932d6205f6d8abc3e3568f54bb4cbea5&pma_username=dIJj&pma_password=RsnL&server=1&phpMyAdmin=3df8c539932d6205f6d8abc3e3568f54bb4cbea5&lang=en-utf-8&convcharset=utf-8&token=b41b5e1d291b4b5605630a85cc506118

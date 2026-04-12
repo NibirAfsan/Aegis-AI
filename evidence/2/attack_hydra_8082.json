@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-04-12T07:40:36.337305",
+  "target": "localhost",
+  "vulnerability": "WordPress Admin Panel Brute-force",
+  "tool": "hydra",
+  "module": "http-post-form",
+  "result": {
+    "success": false,
+    "output": "Hydra v9.6 (c) 2023 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).\n\nHydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2026-04-12 07:40:34\n[DATA] max 4 tasks per 1 server, overall 4 tasks, 2510269825 login tries (l:175/p:14344399), ~627567457 tries per task\n[DATA] attacking http-get://localhost:8082/\n[ATTEMPT] target localhost - login \"\" - pass \"123456\" - 1 of 2510269825 [child 0] (0/0)\n[ATTEMPT] target localhost - login \"\" - pass \"12345\" - 2 of 2510269825 [child 1] (0/0)\n[ATTEMPT] target localhost - login \"\" - pass \"123456789\" - 3 of 2510269825 [child 2] (0/0)\n[ATTEMPT] target localhost - login \"\" - pass \"password\" - 4 of 2510269825 [child 3] (0/0)\n[8082][http-get] host: localhost   password: password\n[STATUS] attack finished for localhost (valid pair found)\n1 of 1 target successfully completed, 1 valid password found\nHydra (https://github.com/vanhauser-thc/thc-hydra) finished at 2026-04-12 07:40:36\n[WARNING] You must supply the web page as an additional option or via -m, default path set to /\n",
+    "credentials": [],
+    "service": "http",
+    "port": 8082,
+    "vulnerability": "WordPress Admin Panel Brute-force",
+    "tool": "hydra"
+  }
+}

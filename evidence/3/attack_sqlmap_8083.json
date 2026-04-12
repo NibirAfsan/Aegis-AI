@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T07:57:04.734295",
+  "target": "localhost",
+  "vulnerability": "HTTP SQL Injection",
+  "tool": "sqlmap",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "[TIMEOUT] SQLMap exceeded 2 minutes",
+    "vulnerability": "HTTP SQL Injection",
+    "tool": "sqlmap",
+    "port": 8083
+  }
+}

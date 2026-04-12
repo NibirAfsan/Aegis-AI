@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T07:57:04.890500",
+  "target": "localhost",
+  "vulnerability": "Apache 2.4.25 mod_jk Request Smuggling leading to RCE (CVE-2017-7679)",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/apache_mod_jk_request_smuggling_rce",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: 'bool' object is not subscriptable\nModule: exploit/multi/http/apache_mod_jk_request_smuggling_rce",
+    "module": "exploit/multi/http/apache_mod_jk_request_smuggling_rce",
+    "vulnerability": "Apache 2.4.25 mod_jk Request Smuggling leading to RCE (CVE-2017-7679)",
+    "tool": "metasploit",
+    "port": 8081
+  }
+}
