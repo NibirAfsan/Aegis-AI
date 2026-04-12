@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T15:40:14.355344",
+  "target": "localhost",
+  "vulnerability": "Apache HTTP Server mod_proxy_ajp Request Smuggling (RCE)",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/apache_mod_proxy_ajp_smuggling",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: 'bool' object is not subscriptable\nModule: exploit/multi/http/apache_mod_proxy_ajp_smuggling",
+    "module": "exploit/multi/http/apache_mod_proxy_ajp_smuggling",
+    "vulnerability": "Apache HTTP Server mod_proxy_ajp Request Smuggling (RCE)",
+    "tool": "metasploit",
+    "port": 8081
+  }
+}

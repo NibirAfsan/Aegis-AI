@@ -1,23 +1,12 @@
 """
 AEGIS core/ai_engine.py
 ========================
-The AI brain of Phase 3. Reads scan results and produces a complete,
-structured attack plan — which tools to use, which modules, in what order,
-and why. No human decision needed.
+The AI brain of Phase 3.
 
-This is what makes AEGIS different from every other student pentest tool.
-A real senior pentester looks at scan results and thinks:
-  "Port 21 open with vsftpd 2.3.4? That's a backdoor. Metasploit module
-   exploit/unix/ftp/vsftpd_234_backdoor. Direct shell."
-  "MySQL on 3306 with no auth? SQLMap it first, then try UDF escalation."
-  "Apache 2.2.8? Multiple critical CVEs. Start with the RCE ones."
-
-This file teaches the machine to think exactly like that.
-
-PROVIDER SUPPORT:
-  Currently: Gemini (free tier, 1500 req/day)
-  Future:    Claude/Anthropic (uncomment when you have key)
-  Switch:    Change AI_PROVIDER in settings.py — nothing else changes.
+FIXES APPLIED:
+  1. _call_gemini() uses new google.genai package (old one deprecated)
+  2. _build_attack_planning_prompt() now instructs AI to prefer executable
+     tools (metasploit, sqlmap, hydra, zap) over "manual" wherever possible
 """
 
 import json
@@ -26,19 +15,14 @@ from django.conf import settings
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MAIN ENTRY POINT — call this from anywhere in the project
+# MAIN ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
 
 def ask_ai(prompt: str, json_mode: bool = False) -> str:
     """
-    Universal AI caller. Routes to the correct provider based on settings.
-    
-    Args:
-        prompt:    The prompt to send
-        json_mode: If True, instructs the model to return valid JSON only
-    
-    Returns:
-        The AI response as a string (or JSON string if json_mode=True)
+    Universal AI caller. Switch provider by changing AI_PROVIDER in settings.py.
+    Currently: gemini (free)
+    Future:    anthropic (uncomment when you have key)
     """
     provider = getattr(settings, 'AI_PROVIDER', 'gemini')
 
@@ -51,80 +35,41 @@ def ask_ai(prompt: str, json_mode: bool = False) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ATTACK PLANNER — the core intelligence
+# ATTACK PLANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
 def generate_attack_plan(scan_results: dict, target: str) -> dict:
     """
-    Takes structured scan results and returns a complete attack plan.
-    
-    The plan tells the attack engine:
-    - Which vulnerabilities to attack (prioritised by severity)
-    - Which tool to use for each (Metasploit, SQLMap, Hydra, ZAP, etc.)
-    - The exact module/command to run
-    - Expected outcome
-    - Fallback if primary attack fails
-    
-    Returns a structured dict like:
-    {
-        "target": "192.168.1.100",
-        "overall_risk": "CRITICAL",
-        "attack_sequence": [
-            {
-                "priority": 1,
-                "vulnerability": "vsftpd 2.3.4 backdoor",
-                "port": 21,
-                "tool": "metasploit",
-                "module": "exploit/unix/ftp/vsftpd_234_backdoor",
-                "options": {"RHOSTS": "192.168.1.100", "RPORT": "21"},
-                "payload": "cmd/unix/interact",
-                "expected_outcome": "root shell",
-                "cvss": 10.0,
-                "fallback": "Try manual FTP anonymous login"
-            },
-            ...
-        ],
-        "post_exploitation": ["dump /etc/passwd", "check sudo -l", "look for SSH keys"],
-        "summary": "Target has 3 critical attack vectors..."
-    }
+    Reads scan results and returns a complete structured attack plan.
+    The plan tells the attack engine which tools, modules, and options to use.
     """
-
-    # Build a rich context prompt for the AI
     prompt = _build_attack_planning_prompt(scan_results, target)
 
-    # Ask the AI — we want JSON back
     raw_response = ask_ai(prompt, json_mode=True)
 
-    # Parse and validate the response
     try:
         plan = _parse_json_response(raw_response)
-        plan['target'] = target
+        plan['target']       = target
         plan['ai_generated'] = True
         return plan
     except Exception as e:
-        # If JSON parsing fails, return a safe fallback
         return {
-            "target": target,
+            "target":       target,
             "overall_risk": "UNKNOWN",
             "attack_sequence": [],
-            "summary": f"AI planning failed: {str(e)}. Raw response: {raw_response[:500]}",
+            "summary":      f"AI planning failed: {str(e)}. Raw: {raw_response[:500]}",
             "ai_generated": False,
-            "error": str(e)
+            "error":        str(e)
         }
 
 
 def _build_attack_planning_prompt(scan_results: dict, target: str) -> str:
-    """
-    Builds the master prompt that makes the AI think like a senior pentester.
-    This prompt is the most important part of the whole system.
-    """
-
-    nmap      = scan_results.get("nmap_raw", "No nmap data")
-    nuclei    = "\n".join(scan_results.get("nuclei", []))
-    zap       = "\n".join(scan_results.get("zap", []))
-    web       = "\n".join(scan_results.get("web_discovery", [])[:15])
-    tech      = "\n".join(scan_results.get("tech_stack", []))
-    gobuster  = "\n".join(scan_results.get("gobuster", [])[:10])
+    nmap       = scan_results.get("nmap_raw", "No nmap data")
+    nuclei     = "\n".join(scan_results.get("nuclei", []))
+    zap        = "\n".join(scan_results.get("zap", []))
+    web        = "\n".join(scan_results.get("web_discovery", [])[:15])
+    tech       = "\n".join(scan_results.get("tech_stack", []))
+    gobuster   = "\n".join(scan_results.get("gobuster", [])[:10])
     compliance = "\n".join(scan_results.get("compliance", []))
 
     return f"""You are an elite penetration tester with 15 years of experience conducting
@@ -171,18 +116,30 @@ exploitable vulnerability you find:
 TOOL SELECTION GUIDE (use these exact tool names):
 - "metasploit" → for known CVEs with Metasploit modules, network services
 - "sqlmap"     → for SQL injection (web forms, parameters, cookies)
-- "hydra"      → for brute-forcing SSH, FTP, HTTP login, SMB credentials  
+- "hydra"      → for brute-forcing SSH, FTP, HTTP login, SMB credentials
 - "zap"        → for active web app attacks (XSS, CSRF, path traversal)
-- "manual"     → for logic flaws, misconfigurations, exposed files
 - "nikto"      → for web server vulnerability scanning + exploitation hints
+- "manual"     → ONLY for logic flaws or misconfigurations with no automated tool
+
+IMPORTANT — TOOL PRIORITY RULES:
+- Prefer executable tools (metasploit, sqlmap, hydra, zap, nikto) over "manual" wherever possible
+- Only use "manual" if absolutely no automated tool can handle the vulnerability
+- For Apache CVEs with known Metasploit modules → always use "metasploit"
+- For any SQL injection finding → always use "sqlmap"
+- For any login form or brute-forceable service → always use "hydra"
+- For exposed files (.env, .git, backup.sql) → use "manual" with curl commands
+- For web application vulnerabilities (XSS, CSRF) → always use "zap"
 
 METASPLOIT MODULE EXAMPLES (for reference):
-- vsftpd 2.3.4:    exploit/unix/ftp/vsftpd_234_backdoor
-- Apache Struts:   exploit/multi/http/struts2_content_type_ognl
-- EternalBlue:     exploit/windows/smb/ms17_010_eternalblue
-- Shellshock:      exploit/multi/http/apache_mod_cgi_bash_env_exec
-- MySQL UDF:       exploit/multi/mysql/mysql_udf_payload
-- Tomcat:          exploit/multi/http/tomcat_mgr_upload
+- vsftpd 2.3.4:         exploit/unix/ftp/vsftpd_234_backdoor
+- Apache Struts:        exploit/multi/http/struts2_content_type_ognl
+- EternalBlue:          exploit/windows/smb/ms17_010_eternalblue
+- Shellshock:           exploit/multi/http/apache_mod_cgi_bash_env_exec
+- Apache mod_cgi:       exploit/multi/http/apache_mod_cgi_bash_env_exec
+- MySQL UDF:            exploit/multi/mysql/mysql_udf_payload
+- Tomcat:               exploit/multi/http/tomcat_mgr_upload
+- Apache 2.4.49 path:   exploit/multi/http/apache_normalize_path_rce
+- WebDAV:               exploit/windows/iis/iis_webdav_scstoragepathfromurl
 
 Respond ONLY with valid JSON, no markdown, no explanation outside the JSON.
 Use this exact structure:
@@ -221,19 +178,17 @@ Do not invent vulnerabilities. If nothing is exploitable, return an empty attack
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# REPORT GENERATOR
+# REPORT GENERATORS
 # ─────────────────────────────────────────────────────────────────────────────
 
 def generate_pentest_report(scan_results: dict, attack_results: dict,
                             target: str) -> str:
     """
-    Generates a professional penetration testing report from scan + attack data.
-    Written in the style of a Big 4 consulting firm security report.
+    Generates a professional penetration testing report.
+    Written in the style of Mandiant, CrowdStrike, or NCC Group.
     """
-
     prompt = f"""You are a senior penetration tester writing a formal security assessment
-report for a client. Write in a professional, precise style similar to reports
-from Mandiant, CrowdStrike, or NCC Group.
+report for a client. Write in a professional, precise style.
 
 TARGET: {target}
 ASSESSMENT TYPE: Full penetration test (black box + vulnerability assessment)
@@ -249,15 +204,12 @@ Write a FULL penetration testing report in Markdown with these sections:
 # Penetration Testing Report — {target}
 
 ## Executive Summary
-(Non-technical, 3 paragraphs. What was tested, what was found, business impact.
-Suitable for a CEO/board to read.)
+(Non-technical, 3 paragraphs. Business impact. Suitable for CEO/board.)
 
 ## Scope and Methodology
-(What was tested, what tools were used, testing approach)
 
 ## Findings Summary Table
 | # | Finding | Severity | CVSS | Location |
-(Table of all findings)
 
 ## Detailed Findings
 For each finding:
@@ -265,37 +217,30 @@ For each finding:
 **Description:** What the vulnerability is
 **Evidence:** Exact proof from scan/attack output
 **Business Impact:** What an attacker could do
-**Remediation:** Specific steps to fix, with code/config examples where relevant
+**Remediation:** Specific fix steps with examples
 **References:** CVE numbers, OWASP links
 
 ## Attack Chain Analysis
-(How vulnerabilities connect — show the kill chain)
 
-## Compliance Impact
-(GDPR, ISO 27001, PCI-DSS implications)
+## Compliance Impact (GDPR, ISO 27001, PCI-DSS)
 
 ## Remediation Priority
-(Ordered list: fix these first)
 
 ## Conclusion
 
-Be specific. Reference actual CVE numbers and actual evidence from the findings.
-Write as if this will be delivered to a real client paying £50,000 for this assessment.
+Be specific. Reference actual CVE numbers from the findings.
 """
-
     return ask_ai(prompt)
 
 
 def generate_dfir_report(scan_results: dict, attack_results: dict,
                          forensic_evidence: dict, target: str) -> str:
     """
-    Generates a Digital Forensics and Incident Response (DFIR) report.
-    Written from the defender's perspective — what happened, when, and how.
+    Generates a Digital Forensics and Incident Response report.
+    Written from the defender's perspective.
     """
-
-    prompt = f"""You are a senior DFIR analyst writing an incident response report
-after investigating a security breach. Write in the style used by CISA,
-NCSC, or major incident response firms.
+    prompt = f"""You are a senior DFIR analyst writing an incident response report.
+Write in the style used by CISA, NCSC, or major IR firms.
 
 TARGET SYSTEM: {target}
 
@@ -305,50 +250,35 @@ TARGET SYSTEM: {target}
 === FORENSIC EVIDENCE COLLECTED ===
 {json.dumps(forensic_evidence, indent=2)[:1500]}
 
-=== NETWORK TRAFFIC CAPTURED ===
-(Scapy packet analysis data included in forensic_evidence above)
-
 Write a complete DFIR report in Markdown:
 
 # Incident Response Report — {target}
 
-## Incident Summary
-(What happened, when, severity level — IR-CRITICAL/HIGH/MEDIUM)
+## Incident Summary (severity: IR-CRITICAL/HIGH/MEDIUM)
 
 ## Timeline of Events
-(Chronological table: timestamp | event | evidence source)
+(Table: timestamp | event | evidence source)
 
-## Attack Vector Analysis
-(How did the attacker get in? Initial access, persistence, lateral movement)
+## Attack Vector Analysis (MITRE ATT&CK techniques)
 
 ## Indicators of Compromise (IOCs)
-- IP addresses
-- File hashes
-- URLs/domains
-- Registry keys / file paths
+- IP addresses, file hashes, URLs, registry keys
 
-## Evidence Collected
-(What was gathered, chain of custody, integrity verification)
+## Evidence Collected (chain of custody, SHA256 hashes)
 
 ## Root Cause Analysis
-(Why did this happen? What control failed?)
 
 ## Containment Actions Taken
-(What was done to stop the attack)
 
 ## Eradication and Recovery Steps
-(How to fully clean the system)
 
 ## Lessons Learned
-(What needs to change to prevent recurrence)
 
 ## Recommendations
-(Prioritised list of security improvements)
 
-Be forensically precise. Include SHA256 hashes where available.
-Reference MITRE ATT&CK techniques (e.g. T1190 Exploit Public-Facing Application).
+Reference MITRE ATT&CK techniques (e.g. T1190, T1059).
+Include SHA256 hashes where available.
 """
-
     return ask_ai(prompt)
 
 
@@ -358,25 +288,44 @@ Reference MITRE ATT&CK techniques (e.g. T1190 Exploit Public-Facing Application)
 
 def _call_gemini(prompt: str, json_mode: bool = False) -> str:
     try:
-        from google import genai                          # new import
-        from google.genai import types
+        from google import genai
+        import time
 
         api_key = getattr(settings, 'GEMINI_API_KEY', None)
         if not api_key:
             return "[ERROR] GEMINI_API_KEY not set in .env file"
 
-        client = genai.Client(api_key=api_key)           # new client style
+        client = genai.Client(api_key=api_key)
 
         if json_mode:
-            full_prompt = prompt + "\n\nIMPORTANT: Return ONLY valid JSON. No markdown code blocks, no explanation, just the raw JSON object."
+            full_prompt = (prompt + "\n\nIMPORTANT: Return ONLY valid JSON. "
+                          "No markdown code blocks, no explanation.")
         else:
             full_prompt = prompt
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=full_prompt,
-        )
-        return response.text
+        # Try gemini-2.5-flash first, fall back to gemini-2.0-flash on 503
+        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+
+        for model in models_to_try:
+            for attempt in range(3):   # 3 retries per model
+                try:
+                    response = client.models.generate_content(
+                        model=model,
+                        contents=full_prompt,
+                    )
+                    return response.text
+                except Exception as e:
+                    err = str(e)
+                    if "503" in err or "UNAVAILABLE" in err:
+                        wait = (attempt + 1) * 10   # 10s, 20s, 30s
+                        time.sleep(wait)
+                        continue   # retry same model
+                    elif "429" in err or "quota" in err.lower():
+                        break      # quota hit — try next model
+                    else:
+                        return f"[GEMINI ERROR] {err}"
+
+        return "[GEMINI ERROR] All models unavailable. Try again in a few minutes."
 
     except Exception as e:
         return f"[GEMINI ERROR] {str(e)}"
@@ -384,8 +333,8 @@ def _call_gemini(prompt: str, json_mode: bool = False) -> str:
 
 def _call_anthropic(prompt: str, json_mode: bool = False) -> str:
     """
-    Calls Anthropic Claude API.
-    Uncomment when you have an API key.
+    Claude API — uncomment anthropic==0.25.0 in requirements.txt when ready.
+    Add ANTHROPIC_API_KEY to .env, change AI_PROVIDER=anthropic in .env.
     """
     try:
         import anthropic
@@ -409,7 +358,7 @@ def _call_anthropic(prompt: str, json_mode: bool = False) -> str:
         return message.content[0].text
 
     except ImportError:
-        return "[ERROR] anthropic package not installed. Run: pip install anthropic"
+        return "[ERROR] anthropic not installed. Run: pip install anthropic"
     except Exception as e:
         return f"[ANTHROPIC ERROR] {str(e)}"
 
@@ -419,35 +368,27 @@ def _call_anthropic(prompt: str, json_mode: bool = False) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _parse_json_response(raw: str) -> dict:
-    """
-    Safely parses a JSON response from the AI.
-    Handles cases where the model wraps JSON in markdown code blocks.
-    """
-    # Strip markdown code blocks if present
+    """Safely parses JSON from AI response, strips markdown fences if present."""
     cleaned = raw.strip()
     cleaned = re.sub(r'^```json\s*', '', cleaned)
-    cleaned = re.sub(r'^```\s*', '', cleaned)
-    cleaned = re.sub(r'\s*```$', '', cleaned)
+    cleaned = re.sub(r'^```\s*',     '', cleaned)
+    cleaned = re.sub(r'\s*```$',     '', cleaned)
     cleaned = cleaned.strip()
-
     return json.loads(cleaned)
 
 
 def test_ai_connection() -> dict:
-    """
-    Tests the AI connection with a simple prompt.
-    Call this from a view to verify setup is working.
-    """
+    """Quick test — visit /test-ai/ to verify Gemini is connected."""
     try:
         response = ask_ai("Say 'AEGIS AI connection successful' and nothing else.")
         return {
-            "status": "ok",
+            "status":   "ok",
             "provider": getattr(settings, 'AI_PROVIDER', 'gemini'),
             "response": response.strip()
         }
     except Exception as e:
         return {
-            "status": "error",
+            "status":   "error",
             "provider": getattr(settings, 'AI_PROVIDER', 'gemini'),
-            "error": str(e)
+            "error":    str(e)
         }

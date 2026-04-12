@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T09:35:17.030142",
+  "target": "localhost",
+  "vulnerability": "Apache httpd 2.4.25 mod_sed Heap Buffer Overflow (RCE)",
+  "tool": "metasploit",
+  "module": "exploit/linux/http/apache_mod_sed_rce",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: 'bool' object is not subscriptable\nModule: exploit/linux/http/apache_mod_sed_rce",
+    "module": "exploit/linux/http/apache_mod_sed_rce",
+    "vulnerability": "Apache httpd 2.4.25 mod_sed Heap Buffer Overflow (RCE)",
+    "tool": "metasploit",
+    "port": 8081
+  }
+}

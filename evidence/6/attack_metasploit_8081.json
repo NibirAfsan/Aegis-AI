@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T12:43:28.727878",
+  "target": "localhost",
+  "vulnerability": "Apache httpd 2.4.25 mod_sed RCE (CVE-2022-22720)",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/apache_mod_sed_rce",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: 'bool' object is not subscriptable\nModule: exploit/multi/http/apache_mod_sed_rce",
+    "module": "exploit/multi/http/apache_mod_sed_rce",
+    "vulnerability": "Apache httpd 2.4.25 mod_sed RCE (CVE-2022-22720)",
+    "tool": "metasploit",
+    "port": 8081
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T09:35:17.052430",
+  "target": "localhost",
+  "vulnerability": "Apache httpd 2.2.8 WebDAV Arbitrary File Upload (RCE)",
+  "tool": "manual",
+  "module": "WebDAV Arbitrary File Upload for RCE",
+  "result": {
+    "success": null,
+    "output": "[MANUAL TESTING REQUIRED]\n\nVulnerability: Apache httpd 2.2.8 WebDAV Arbitrary File Upload (RCE)\nPort: 8083\n\nCommand to run:\ncadaver http://localhost:8083/; put /path/to/shell.php; GET http://localhost:8083/shell.php?cmd=id\n\nExpected: Remote Code Execution via web shell upload, leading to a reverse shell as the web server user.\n\nFallback: Attempt to exploit CVE-2010-0425 (CVSS 10.0) manually if specific PoCs are available, or try `auxiliary/gather/apache_mod_proxy_ssrf` for internal enumeration on port 8083.",
+    "tool": "manual",
+    "vulnerability": "Apache httpd 2.2.8 WebDAV Arbitrary File Upload (RCE)",
+    "port": 8083
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T15:40:14.800851",
+  "target": "localhost",
+  "vulnerability": "Apache Struts2 Content-Type OGNL Expression RCE",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/struts2_content_type_ognl",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: \"Invalid option 'LHOST'.\"\nModule: exploit/multi/http/struts2_content_type_ognl",
+    "module": "exploit/multi/http/struts2_content_type_ognl",
+    "vulnerability": "Apache Struts2 Content-Type OGNL Expression RCE",
+    "tool": "metasploit",
+    "port": 8083
+  }
+}

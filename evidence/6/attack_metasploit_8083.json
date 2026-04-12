@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T12:43:28.797870",
+  "target": "localhost",
+  "vulnerability": "Apache httpd 2.2.8 WebDAV XML External Entity (XXE) RCE",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/apache_mod_dav_exec",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: 'bool' object is not subscriptable\nModule: exploit/multi/http/apache_mod_dav_exec",
+    "module": "exploit/multi/http/apache_mod_dav_exec",
+    "vulnerability": "Apache httpd 2.2.8 WebDAV XML External Entity (XXE) RCE",
+    "tool": "metasploit",
+    "port": 8083
+  }
+}

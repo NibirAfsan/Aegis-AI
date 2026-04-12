@@ -189,37 +189,27 @@ def attack_status(request, task_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def generate_report(request, scan_id):
-    """
-    Generates report using AI if attack data exists,
-    otherwise generates text-only pentest report.
-    """
     try:
         scan = ScanResult.objects.get(id=scan_id)
     except ScanResult.DoesNotExist:
         return JsonResponse({"error": "Scan not found"}, status=404)
 
-    results       = scan.raw_data
+    results        = scan.raw_data
     attack_results = results.get("attack_results", {})
 
-    # Use AI if available
     try:
         from core.ai_engine import generate_pentest_report, generate_dfir_report
 
         pentest_report = generate_pentest_report(results, attack_results, scan.target)
 
-        # Generate DFIR report if we have attack results
+        # Only attempt DFIR if we have actual attack results
         dfir_report = ""
-        if attack_results:
-            forensic_evidence = {
-                "evidence_dir": attack_results.get("evidence_dir", ""),
-                "attacks_run":  attack_results.get("attacks_run", 0),
-                "successful":   attack_results.get("successful", 0),
-            }
+        if attack_results.get("attacks_run", 0) > 0:
+            forensic_evidence = _collect_evidence_summary(scan)
             dfir_report = generate_dfir_report(
                 results, attack_results, forensic_evidence, scan.target
             )
 
-        # Save to DB
         scan.ai_report = pentest_report
         scan.save()
 
@@ -232,15 +222,33 @@ def generate_report(request, scan_id):
         })
 
     except Exception as e:
-        # Fallback to text report
+        # Always fall back to text report — never leave user stuck
         report = _build_text_report(scan, results)
         return JsonResponse({
             "status":  "ok",
             "report":  report,
             "scan_id": scan_id,
-            "note":    f"Text report (AI error: {str(e)})"
+            "note":    f"Text report (AI busy: {str(e)[:100]}). Try Generate Report again in 2 minutes."
         })
 
+
+def _collect_evidence_summary(scan) -> dict:
+    """Collects evidence files from disk for the DFIR report."""
+    from scanner_ui.models import ForensicEvidence
+    evidence_items = ForensicEvidence.objects.filter(scan=scan)
+    return {
+        "items": [
+            {
+                "type":        e.evidence_type,
+                "file":        e.file_path,
+                "sha256":      e.sha256_hash,
+                "description": e.description,
+                "timestamp":   e.collected_at.isoformat()
+            }
+            for e in evidence_items
+        ],
+        "total": evidence_items.count()
+    }
 
 def _build_text_report(scan, results: dict) -> str:
     lines = [
@@ -271,6 +279,21 @@ def _build_text_report(scan, results: dict) -> str:
     lines += results.get("tech_stack", ["No data"])
     lines += ["", "[8] COMPLIANCE"]
     lines += results.get("compliance", ["None"])
+
+    # Add after the compliance section in _build_text_report:
+    if attack_results.get("results"):
+        lines += ["", "[9] ATTACK EVIDENCE (PROOF OF EXPLOITATION)"]
+        for r in attack_results["results"]:
+            tool    = r.get("tool", "unknown").upper()
+            vuln    = r.get("vulnerability", "")
+            port    = r.get("port", "")
+            success = "✓ SUCCESSFUL" if r.get("success") else "✗ FAILED/BLOCKED"
+            lines.append(f"\n  {success} — {tool} on port {port}")
+            lines.append(f"  Vulnerability: {vuln}")
+            if r.get("output"):
+                lines.append(f"  Evidence:\n    {r['output'][:500]}")
+            if r.get("credentials"):
+                lines.append(f"  Credentials found: {r['credentials']}")
 
     if results.get("attack_results"):
         ar = results["attack_results"]
