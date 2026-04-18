@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T22:44:09.443276",
+  "target": "localhost",
+  "vulnerability": "Apache 2.2.8 CGI Bash Environment Variable Injection (Shellshock)",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/apache_mod_cgi_bash_env_exec",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: \"Invalid option 'PAYLOAD'.\"\nModule: exploit/multi/http/apache_mod_cgi_bash_env_exec",
+    "module": "exploit/multi/http/apache_mod_cgi_bash_env_exec",
+    "vulnerability": "Apache 2.2.8 CGI Bash Environment Variable Injection (Shellshock)",
+    "tool": "metasploit",
+    "port": 8083
+  }
+}

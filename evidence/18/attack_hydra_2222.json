@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-04-13T19:31:38.886898",
+  "target": "127.0.0.1",
+  "vulnerability": "Weak/Default Credentials on OpenSSH 4.7p1",
+  "tool": "hydra",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "Hydra v9.6 (c) 2023 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).\n\nHydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2026-04-13 19:31:37\n[DATA] max 4 tasks per 1 server, overall 4 tasks, 2510269825 login tries (l:175/p:14344399), ~627567457 tries per task\n[DATA] attacking ssh://127.0.0.1:2222/\n[ERROR] could not connect to ssh://127.0.0.1:2222 - kex error : no match for method mac algo client->server: server [hmac-md5,hmac-sha1,umac-64@openssh.com,hmac-ripemd160,hmac-ripemd160@openssh.com,hmac-sha1-96,hmac-md5-96], client [hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256,hmac-sha2-512]\n",
+    "credentials": [],
+    "service": "ssh",
+    "port": 2222,
+    "vulnerability": "Weak/Default Credentials on OpenSSH 4.7p1",
+    "tool": "hydra"
+  }
+}

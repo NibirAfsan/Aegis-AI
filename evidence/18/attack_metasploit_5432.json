@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-13T19:31:37.411800",
+  "target": "127.0.0.1",
+  "vulnerability": "PostgreSQL DB 8.3.x Remote Code Execution (CVE-2013-1903, CVE-2013-1902)",
+  "tool": "metasploit",
+  "module": "exploit/multi/postgres/postgres_copy_from_program_rce",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: 'bool' object is not subscriptable\nModule: exploit/multi/postgres/postgres_copy_from_program_rce",
+    "module": "exploit/multi/postgres/postgres_copy_from_program_rce",
+    "vulnerability": "PostgreSQL DB 8.3.x Remote Code Execution (CVE-2013-1903, CVE-2013-1902)",
+    "tool": "metasploit",
+    "port": 5432
+  }
+}

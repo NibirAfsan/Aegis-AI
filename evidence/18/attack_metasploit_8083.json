@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-13T19:31:37.708001",
+  "target": "127.0.0.1",
+  "vulnerability": "Apache httpd 2.2.8 Remote Code Execution (CVE-2010-0425)",
+  "tool": "metasploit",
+  "module": "N/A (manual search for modules targeting Apache 2.2.8 with CVE-2010-0425, possibly related to mod_isapi or other modules for this version)",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: 'bool' object is not subscriptable\nModule: N/A (manual search for modules targeting Apache 2.2.8 with CVE-2010-0425, possibly related to mod_isapi or other modules for this version)",
+    "module": "N/A (manual search for modules targeting Apache 2.2.8 with CVE-2010-0425, possibly related to mod_isapi or other modules for this version)",
+    "vulnerability": "Apache httpd 2.2.8 Remote Code Execution (CVE-2010-0425)",
+    "tool": "metasploit",
+    "port": 8083
+  }
+}

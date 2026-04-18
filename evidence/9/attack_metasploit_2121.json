@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-12T22:41:09.154573",
+  "target": "localhost",
+  "vulnerability": "vsftpd 2.3.4 Backdoor (RCE)",
+  "tool": "metasploit",
+  "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: \"Invalid option 'PAYLOAD'.\"\nModule: exploit/unix/ftp/vsftpd_234_backdoor",
+    "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+    "vulnerability": "vsftpd 2.3.4 Backdoor (RCE)",
+    "tool": "metasploit",
+    "port": 2121
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-18T14:19:30.944356",
+  "target": "localhost",
+  "vulnerability": "Apache httpd 2.2.8 - Critical RCE via CVE-2010-0425 (mod_proxy_ftp bypass)",
+  "tool": "nikto",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "[TIMEOUT] Nikto exceeded time limit",
+    "vulnerability": "Apache httpd 2.2.8 - Critical RCE via CVE-2010-0425 (mod_proxy_ftp bypass)",
+    "tool": "nikto",
+    "port": 8083
+  }
+}

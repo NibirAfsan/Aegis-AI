@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-13T19:31:37.366767",
+  "target": "127.0.0.1",
+  "vulnerability": "Weak/Default Credentials on MySQL",
+  "tool": "hydra",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "[TIMEOUT] Hydra exceeded 2 minutes",
+    "vulnerability": "Weak/Default Credentials on MySQL",
+    "tool": "hydra",
+    "port": 3306
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-13T19:29:36.891159",
+  "target": "127.0.0.1",
+  "vulnerability": "vsftpd 2.3.4 Backdoor Remote Code Execution (CVE-2011-2523)",
+  "tool": "metasploit",
+  "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: \"Invalid option 'LHOST'.\"\nModule: exploit/unix/ftp/vsftpd_234_backdoor",
+    "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+    "vulnerability": "vsftpd 2.3.4 Backdoor Remote Code Execution (CVE-2011-2523)",
+    "tool": "metasploit",
+    "port": 2121
+  }
+}

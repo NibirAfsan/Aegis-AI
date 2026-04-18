@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T22:46:09.478718",
+  "target": "localhost",
+  "vulnerability": "MySQL 5.0.51a (Default/Weak Credentials & UDF Exploitation)",
+  "tool": "hydra",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "[TIMEOUT] Hydra exceeded 2 minutes",
+    "vulnerability": "MySQL 5.0.51a (Default/Weak Credentials & UDF Exploitation)",
+    "tool": "hydra",
+    "port": 3306
+  }
+}

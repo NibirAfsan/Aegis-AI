@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-14T09:04:37.606685",
+  "target": "localhost",
+  "vulnerability": "vsftpd 2.3.4 backdoor",
+  "tool": "metasploit",
+  "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: \"Invalid option 'RHOST'.\"\nModule: exploit/unix/ftp/vsftpd_234_backdoor",
+    "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+    "vulnerability": "vsftpd 2.3.4 backdoor",
+    "tool": "metasploit",
+    "port": 2121
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T22:46:10.891837",
+  "target": "localhost",
+  "vulnerability": "Apache httpd 2.4.25 (Multiple High CVSS CVEs)",
+  "tool": "manual",
+  "module": "N/A",
+  "result": {
+    "success": null,
+    "output": "[MANUAL TESTING REQUIRED]\n\nVulnerability: Apache httpd 2.4.25 (Multiple High CVSS CVEs)\nPort: 8081\n\nCommand to run:\nsearchsploit apache 2.4.25\n\nExpected: Identification and exploitation of a specific RCE or privilege escalation vulnerability for Apache 2.4.25, leading to remote shell access.\n\nFallback: If no direct RCE exploits are found, perform extensive web enumeration with gobuster (after installing wordlists) and nikto to identify web applications, hidden directories, or other misconfigurations.",
+    "tool": "manual",
+    "vulnerability": "Apache httpd 2.4.25 (Multiple High CVSS CVEs)",
+    "port": 8081
+  }
+}

@@ -22,6 +22,7 @@ services:
       - "2121:21"
       - "3306:3306"
       - "5432:5432"
+      - "6200:6200" 
     restart: unless-stopped
     platform: linux/amd64
     networks:

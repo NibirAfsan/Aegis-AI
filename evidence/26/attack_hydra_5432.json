@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-04-18T14:14:31.933185",
+  "target": "localhost",
+  "vulnerability": "PostgreSQL 8.3.0-8.3.7 - Critical RCE/Auth Bypass (CVE-2013-1903, CVE-2013-1902)",
+  "tool": "hydra",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "Hydra v9.6 (c) 2023 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).\n\nHydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2026-04-18 14:14:31\n[ERROR] Unknown service: postgresql\n",
+    "credentials": [],
+    "service": "postgresql",
+    "port": 5432,
+    "vulnerability": "PostgreSQL 8.3.0-8.3.7 - Critical RCE/Auth Bypass (CVE-2013-1903, CVE-2013-1902)",
+    "tool": "hydra"
+  }
+}

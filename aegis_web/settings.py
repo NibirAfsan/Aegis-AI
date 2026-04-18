@@ -87,6 +87,7 @@ CELERY_TASK_SERIALIZER = 'json'
 # ── AI providers — loaded from .env, never hardcoded ─────────────────────────
 GEMINI_API_KEY    = os.environ.get('GEMINI_API_KEY')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')   # add when you get it
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
 # Which provider to use — change this one line to switch
 AI_PROVIDER = os.environ.get('AI_PROVIDER', 'gemini')

@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-04-13T19:31:38.923390",
+  "target": "127.0.0.1",
+  "vulnerability": "HTTP TRACE method enabled on Apache 2.2.8",
+  "tool": "manual",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "[EXECUTED]\nCommand: curl -X TRACE http://127.0.0.1:8083/\n\nTRACE / HTTP/1.1\nHost: 127.0.0.1:8083\nUser-Agent: curl/8.17.0\nAccept: */*\n\n",
+    "tool": "manual",
+    "command": "curl -X TRACE http://127.0.0.1:8083/ -o evidence/18/curl_output_8083.txt",
+    "evidence_file": "evidence/18/curl_output_8083.txt",
+    "vulnerability": "HTTP TRACE method enabled on Apache 2.2.8",
+    "port": 8083
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-04-18T14:14:31.543037",
+  "target": "localhost",
+  "vulnerability": "Exposed Sensitive Files (e.g., .env, .git/config) and Directory Listing",
+  "tool": "manual",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "[EXECUTED]\nCommand: curl http://localhost:8082/.env -o .env && curl http://localhost:8082/.git/config -o .git_config && curl http://localhost:8082/.env.bak -o .env.bak && git clone http://localhost:8082/.git extracted_git_repo\n\n<!--\n  ~ Copyright (c) 2014-2026 Bjoern Kimminich & the OWASP Juice Shop contributors.\n  ~ SPDX-License-Identifier: MIT\n  -->\n\n<!doctype html>\n<html lang=\"en\" data-beasties-container>\n<head>\n  <meta charset=\"utf-8\">\n  <title>OWASP Juice Shop</title>\n  <meta name=\"description\" content=\"Probably the most modern and sophisticated insecure web application\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <link id=\"favicon\" rel=\"icon\" type=\"image/x-icon\" href=\"assets/public/favicon_js.ico\">\n  <link rel=\"stylesheet\" type=\"text/css\" href=\"//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.css\">\n  <script src=\"//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.js\"></script>\n  <script src=\"//cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js\"></script>\n  <script>\n    window.addEventListener(\"load\", function(){\n      window.cookieconsent.initialise({\n        \"palette\": {\n          \"popup\": { \"background\": \"var(--theme-primary)\", \"text\": \"var(--theme-text)\" },\n          \"button\": { \"background\": \"var(--theme-accent)\", \"text\": \"var(--theme-text)\" }\n        },\n        \"theme\": \"classic\",\n        \"position\": \"bottom-right\",\n        \"content\": { \"message\": \"This website uses fruit cookies to ensure you get the juiciest tracking experience.\", \"dismiss\": \"Me want it!\", \"link\": \"But me wait!\", \"href\": \"https://www.youtube.com/watch?v=9PnbKL3wuH4\" }\n      })});\n  </script>\n<style>html{--mat-sys-on-surface:initial}.mat-app-background{background-color:var(--mat-app-background-color, var(--mat-sys-background, transparent));color:var(--mat-app-text-color, var(--mat-sys-on-background, inherit))}.mat-typography{font:400 14px/20px Roboto,sans-serif;letter-spacing:.0178571429em}html{--mat-tooltip-supporting-text-font:Roboto, sans-serif;--mat-tooltip-supporting-text-size:12px;--mat-tooltip-supporting-text-weight:400;--mat-tooltip-supporting-text-tracking:.0333333333em}html{--mat-app-background-color:#fafafa;--mat-app-tex",
+    "tool": "manual",
+    "command": "curl http://localhost:8082/.env -o evidence/26/curl_output_8082.txt && curl http://localhost:8082/.git/config -o evidence/26/curl_output_8082.txt && curl http://localhost:8082/.env.bak -o evidence/26/curl_output_8082.txt && git clone http://localhost:8082/.git extracted_git_repo",
+    "evidence_file": "evidence/26/curl_output_8082.txt",
+    "vulnerability": "Exposed Sensitive Files (e.g., .env, .git/config) and Directory Listing",
+    "port": 8082
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-18T14:21:30.984628",
+  "target": "localhost",
+  "vulnerability": "MySQL 5.0.51a-3ubuntu5 - Weak Credentials / Exposed to Network (CVE-2017-15945, CVE-2009-4028)",
+  "tool": "hydra",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "[TIMEOUT] Hydra exceeded 2 minutes",
+    "vulnerability": "MySQL 5.0.51a-3ubuntu5 - Weak Credentials / Exposed to Network (CVE-2017-15945, CVE-2009-4028)",
+    "tool": "hydra",
+    "port": 3306
+  }
+}

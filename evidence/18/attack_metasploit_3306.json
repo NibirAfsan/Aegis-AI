@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-13T19:31:37.677061",
+  "target": "127.0.0.1",
+  "vulnerability": "MySQL 5.0.51a User-Defined Function (UDF) Remote Code Execution",
+  "tool": "metasploit",
+  "module": "exploit/multi/mysql/mysql_udf_payload",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: \"Invalid option 'LHOST'.\"\nModule: exploit/multi/mysql/mysql_udf_payload",
+    "module": "exploit/multi/mysql/mysql_udf_payload",
+    "vulnerability": "MySQL 5.0.51a User-Defined Function (UDF) Remote Code Execution",
+    "tool": "metasploit",
+    "port": 3306
+  }
+}

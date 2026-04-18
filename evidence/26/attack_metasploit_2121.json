@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-18T14:14:31.290240",
+  "target": "localhost",
+  "vulnerability": "vsftpd 2.3.4 Backdoor (CVE-2011-2523)",
+  "tool": "metasploit",
+  "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+  "result": {
+    "success": false,
+    "output": "Module executed but no session created. Job ID: 0",
+    "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+    "vulnerability": "vsftpd 2.3.4 Backdoor (CVE-2011-2523)",
+    "tool": "metasploit",
+    "port": 2121
+  }
+}

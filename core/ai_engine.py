@@ -21,12 +21,17 @@ from django.conf import settings
 
 def ask_ai(prompt: str, json_mode: bool = False) -> str:
     provider = getattr(settings, 'AI_PROVIDER', 'gemini')
-    if provider == 'gemini':
-        return _call_gemini(prompt, json_mode)
+    if provider == 'groq':
+        return _call_groq(prompt, json_mode)
+    elif provider == 'gemini':
+        result = _call_gemini(prompt, json_mode)
+        if "[GEMINI ERROR]" in result and getattr(settings, 'GROQ_API_KEY', None):
+            return _call_groq(prompt, json_mode)
+        return result
     elif provider == 'anthropic':
         return _call_anthropic(prompt, json_mode)
     else:
-        raise ValueError(f"Unknown AI provider: {provider}")
+        raise ValueError(f"Unknown provider: {provider}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -52,11 +57,11 @@ def generate_attack_plan(scan_results: dict, target: str) -> dict:
 
 def _build_attack_planning_prompt(scan_results: dict, target: str) -> str:
     nmap       = scan_results.get("nmap_raw", "No nmap data")
-    nuclei     = "\n".join(scan_results.get("nuclei", []))
-    zap        = "\n".join(scan_results.get("zap", []))
-    web        = "\n".join(scan_results.get("web_discovery", [])[:15])
-    tech       = "\n".join(scan_results.get("tech_stack", []))
-    gobuster   = "\n".join(scan_results.get("gobuster", [])[:10])
+    nuclei     = "\n".join(scan_results.get("nuclei", [])[:10])
+    zap        = "\n".join(scan_results.get("zap", [])[:10])
+    web        = "\n".join(scan_results.get("web_discovery", [])[:10])
+    tech       = "\n".join(scan_results.get("tech_stack", [])[:10])
+    gobuster   = "\n".join(scan_results.get("gobuster", [])[:8])
     compliance = "\n".join(scan_results.get("compliance", []))
 
     return f"""You are an elite penetration tester with 15 years of experience.
@@ -311,7 +316,7 @@ def _call_gemini(prompt: str, json_mode: bool = False) -> str:
             full_prompt = prompt
 
         # Try models in order — fall back if overloaded
-        models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+        models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-001", "gemini-2.0-flash-lite"]
 
         for model in models:
             for attempt in range(3):
@@ -364,6 +369,47 @@ def _call_anthropic(prompt: str, json_mode: bool = False) -> str:
         return "[ERROR] pip install anthropic"
     except Exception as e:
         return f"[ANTHROPIC ERROR] {str(e)}"
+
+
+
+def _call_groq(prompt: str, json_mode: bool = False) -> str:
+    """
+    Groq API — free tier, 14,400 req/day, no card needed.
+    Model: llama-3.3-70b-versatile — excellent for security analysis.
+    """
+    try:
+        import requests as req
+
+        api_key = getattr(settings, 'GROQ_API_KEY', None)
+        if not api_key:
+            return "[ERROR] GROQ_API_KEY not set in .env"
+
+        system = ("You are an expert penetration tester. Return ONLY valid JSON, no markdown."
+                  if json_mode else
+                  "You are an expert penetration tester and security analyst.")
+
+        response = req.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}",
+                     "Content-Type": "application/json"},
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user",   "content": prompt}
+                ],
+                "temperature": 0.3,
+                "max_tokens":  4096
+            },
+            timeout=120
+        )
+        data = response.json()
+        if "choices" not in data:
+            return f"[GROQ ERROR] {data}"
+        return data["choices"][0]["message"]["content"]
+
+    except Exception as e:
+        return f"[GROQ ERROR] {str(e)}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

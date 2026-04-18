@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-12T22:44:09.250520",
+  "target": "localhost",
+  "vulnerability": "Apache 2.2.8 SQL Injection (Explicitly identified)",
+  "tool": "sqlmap",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "[TIMEOUT] SQLMap exceeded 3 minutes",
+    "vulnerability": "Apache 2.2.8 SQL Injection (Explicitly identified)",
+    "tool": "sqlmap",
+    "port": 8083
+  }
+}

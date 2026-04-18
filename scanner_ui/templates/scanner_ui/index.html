@@ -12,8 +12,6 @@
             padding: 30px;
             min-height: 100vh;
         }
-
-        /* ── Panels ───────────────────────────────── */
         .panel {
             border: 1px solid #00ff00;
             padding: 25px;
@@ -24,11 +22,8 @@
         }
         .panel-red  { border-color:#ff3333; box-shadow:0 0 12px rgba(255,50,50,0.15); color:#ff5555; }
         .panel-blue { border-color:#00aaff; box-shadow:0 0 12px rgba(0,170,255,0.1);  color:#aaddff; }
-
         h1 { font-size:20px; letter-spacing:2px; margin-bottom:20px; }
         h2 { font-size:16px; letter-spacing:1px; margin-bottom:15px; }
-
-        /* ── Form ─────────────────────────────────── */
         .form-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
         input[type="text"], select {
             background:#111; color:#00ff00; border:1px solid #00aa00;
@@ -39,8 +34,6 @@
         input[type="text"]:focus, select:focus { border-color:#00ff00; }
         .chk-label { display:flex; align-items:center; gap:6px; font-size:12px;
                      cursor:pointer; color:#aaffaa; }
-
-        /* ── Buttons ──────────────────────────────── */
         .btn { padding:10px 22px; font-family:inherit; font-size:13px;
                font-weight:bold; cursor:pointer; border-radius:3px;
                border:none; letter-spacing:1px; }
@@ -51,9 +44,8 @@
                     animation:blink 1.5s infinite; }
         .btn-blue { background:#003366; color:#00aaff; border:1px solid #0066aa; }
         .btn-blue:hover { background:#004488; }
+        .btn-blue:disabled { background:#001122; color:#224466; cursor:not-allowed; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.6} }
-
-        /* ── Progress bar ─────────────────────────── */
         #progressArea { display:none; margin-top:15px; }
         .progress-track {
             width:100%; height:6px; background:#0a2a0a;
@@ -63,8 +55,6 @@
         .progress-fill { height:100%; background:#00ff00; width:0%;
                          transition:width 0.4s ease; }
         #progressMsg { font-size:12px; color:#aaffaa; }
-
-        /* ── Results tabs ─────────────────────────── */
         #resultsArea { display:none; margin-top:20px; }
         .tab-bar { display:flex; gap:4px; flex-wrap:wrap; }
         .tab {
@@ -87,8 +77,6 @@
             line-height:1.7; max-height:450px; overflow-y:auto;
             border-radius:2px;
         }
-
-        /* ── Severity badge ───────────────────────── */
         .sev { display:inline-block; padding:3px 10px; font-size:12px;
                font-weight:bold; border-radius:3px; margin-left:10px; }
         .sev-CRITICAL { background:#3a0000; color:#ff2222; border:1px solid #660000; }
@@ -96,44 +84,76 @@
         .sev-MEDIUM   { background:#1a1a00; color:#ffcc00; border:1px solid #555500; }
         .sev-LOW      { background:#001a1a; color:#00cccc; border:1px solid #005555; }
         .sev-INFO     { background:#001a00; color:#00aa00; border:1px solid #004400; }
-
-        /* ── Defensive monitor ────────────────────── */
         #trafficBox { height:180px; overflow-y:auto; font-size:12px; line-height:1.8; }
         .t-normal   { color:#558855; }
         .t-high     { color:#ff8800; }
         .t-critical { color:#ff3333; font-weight:bold; }
-
-        /* ── Scan history ─────────────────────────── */
         .scan-row {
             display:flex; justify-content:space-between; padding:6px 0;
             border-bottom:1px solid #112211; font-size:12px; color:#667766;
         }
         .scan-row:hover { color:#aaffaa; cursor:pointer; }
+
+        /* ── Inline report styles ──────────────────── */
+        #reportOutput {
+            display:none;
+            margin-top:20px;
+            padding:30px;
+            background:#fff;
+            color:#111;
+            border-radius:6px;
+            font-family: Arial, sans-serif;
+            line-height: 1.7;
+        }
+        #reportOutput h1 { color:#1a1a2e; border-bottom:3px solid #cc0000;
+                           padding-bottom:10px; margin:20px 0 10px; font-size:22px; }
+        #reportOutput h2 { color:#cc0000; margin:20px 0 8px; font-size:18px; }
+        #reportOutput h3 { color:#1a1a2e; margin:14px 0 6px; font-size:15px; }
+        #reportOutput p  { margin-bottom:10px; }
+        #reportOutput ul { margin:8px 0 8px 20px; }
+        #reportOutput li { margin-bottom:4px; }
+        #reportOutput table { border-collapse:collapse; width:100%; margin:12px 0; }
+        #reportOutput td, #reportOutput th {
+            border:1px solid #ddd; padding:8px; text-align:left; }
+        #reportOutput th { background:#1a1a2e; color:white; }
+        #reportOutput pre { background:#f5f5f5; padding:12px;
+                            border-left:4px solid #cc0000; font-size:12px; }
+        #reportOutput code { background:#f5f5f5; padding:2px 6px;
+                             border-radius:3px; font-size:12px; }
+        .report-header { background:#cc0000; color:white; padding:20px;
+                         margin:-30px -30px 20px; border-radius:6px 6px 0 0; }
+        .report-header h2 { color:white; margin:0 0 6px; }
+        .report-header p  { margin:0; opacity:.9; font-size:13px; }
+        .pdf-btn {
+            display:inline-block; margin-top:20px; padding:12px 24px;
+            background:#cc0000; color:white; text-decoration:none;
+            border-radius:4px; font-weight:bold; font-family:inherit;
+        }
+        .pdf-btn:hover { background:#aa0000; }
+        .dfir-section { margin-top:30px; padding-top:20px;
+                        border-top:2px solid #cc0000; }
     </style>
 </head>
 <body>
 
 <!-- ════════════════════════════ OFFENSIVE ENGINE -->
-<div class="panel">
+<div class="panel" id="mainPanel">
     <h1>[ AEGIS-AI : UNIFIED OFFENSIVE ENGINE ]</h1>
 
     <form id="scanForm">
         {% csrf_token %}
         <div class="form-row">
-            <input type="text" name="target" value="host.docker.internal"
+            <input type="text" name="target" value="localhost"
                    placeholder="IP / Domain" required>
-
             <select name="scan_type">
-                <option value="lab">LAB AUDIT  (ports 8081-8083)</option>
+                <option value="lab">LAB AUDIT  (ports 8081-8083 + 2121,2222,3306,5432)</option>
                 <option value="top100">QUICK RECON  (common ports)</option>
                 <option value="web">WEB AUDIT  (top 1000)</option>
                 <option value="full">DEEP PENETRATION  (all 65k ports)</option>
             </select>
-
             <button type="submit" class="btn btn-green" id="execBtn">
                 INITIATE MISSION
             </button>
-
             <label class="chk-label">
                 <input type="checkbox" name="stealth_mode"> STEALTH
             </label>
@@ -143,7 +163,6 @@
         </div>
     </form>
 
-    <!-- Progress bar -->
     <div id="progressArea">
         <div style="margin:14px 0 6px; font-size:12px; color:#aaffaa;">
             [*] MISSION IN PROGRESS...
@@ -154,7 +173,6 @@
         <div id="progressMsg">Initialising...</div>
     </div>
 
-    <!-- Results -->
     <div id="resultsArea">
         <div style="display:flex; align-items:center; margin-bottom:12px;
                     flex-wrap:wrap; gap:8px;">
@@ -167,9 +185,8 @@
             </button>
         </div>
 
-        <!-- Tabs -->
         <div class="tab-bar">
-            <button class="tab active"       onclick="showTab('nmap')">NMAP</button>
+            <button class="tab active"            onclick="showTab('nmap')">NMAP</button>
             <button class="tab" id="tab-nuclei"   onclick="showTab('nuclei')">NUCLEI</button>
             <button class="tab" id="tab-zap"      onclick="showTab('zap')">ZAP</button>
             <button class="tab" id="tab-gobuster" onclick="showTab('gobuster')">GOBUSTER</button>
@@ -188,15 +205,27 @@
         <div id="pane-tech"     class="tab-content"><pre id="out-tech"></pre></div>
         <div id="pane-comp"     class="tab-content"><pre id="out-comp"></pre></div>
 
-        <!-- Attack button — only shown on HIGH/CRITICAL -->
         <div id="attackArea" style="display:none; margin-top:15px;">
             <button class="btn btn-red" onclick="initiateAttack()">
                 ⚡  EXECUTE BREACH SEQUENCE
             </button>
             <span style="font-size:11px; color:#884444; margin-left:12px;">
-                Metasploit RPC — Phase 3
+                AI-powered · Metasploit / SQLMap / Hydra / ZAP
             </span>
         </div>
+    </div>
+
+    <!-- ── Inline report output ───────────────────────────── -->
+    <div id="reportOutput">
+        <div class="report-header">
+            <h2>🔒 AEGIS-AI Security Assessment Report</h2>
+            <p>Generated by AEGIS-AI Framework &nbsp;|&nbsp; CONFIDENTIAL</p>
+        </div>
+        <div id="reportContent"></div>
+        <div id="dfirContent" class="dfir-section" style="display:none"></div>
+        <a id="pdfLink" class="pdf-btn" href="#" style="display:none">
+            ⬇ Download PDF Report
+        </a>
     </div>
 </div>
 
@@ -223,7 +252,6 @@
 </div>
 {% endif %}
 
-
 <script>
 let currentTaskId = null;
 let currentScanId = null;
@@ -238,6 +266,7 @@ document.getElementById('scanForm').onsubmit = async (e) => {
 
     document.getElementById('progressArea').style.display  = 'block';
     document.getElementById('resultsArea').style.display   = 'none';
+    document.getElementById('reportOutput').style.display  = 'none';
     document.getElementById('progressFill').style.width    = '0%';
     document.getElementById('progressMsg').textContent     = 'Queueing task...';
     document.getElementById('attackArea').style.display    = 'none';
@@ -245,11 +274,9 @@ document.getElementById('scanForm').onsubmit = async (e) => {
 
     try {
         const resp = await fetch('/start-scan/', {
-            method: 'POST',
-            body: new FormData(e.target)
+            method: 'POST', body: new FormData(e.target)
         });
         const data = await resp.json();
-
         if (data.task_id) {
             currentTaskId = data.task_id;
             if (pollInterval) clearInterval(pollInterval);
@@ -264,29 +291,26 @@ document.getElementById('scanForm').onsubmit = async (e) => {
     }
 };
 
-// ── Poll task status every 3 seconds ─────────────────────────────
+// ── Poll scan status ──────────────────────────────────────────────
 async function pollStatus() {
     if (!currentTaskId) return;
     try {
         const resp = await fetch(`/scan-status/${currentTaskId}/`);
         const data = await resp.json();
-
         if (data.state === 'PROGRESS') {
             const pct = Math.round((data.progress / (data.total || 100)) * 100);
             document.getElementById('progressFill').style.width = pct + '%';
             document.getElementById('progressMsg').textContent  = data.message;
-
         } else if (data.state === 'SUCCESS') {
             clearInterval(pollInterval);
             currentScanId = data.scan_id;
             await loadResults(data.scan_id, data.severity);
-
         } else if (data.state === 'FAILURE') {
             clearInterval(pollInterval);
             showError('Scan failed: ' + data.message);
             resetBtn();
         }
-    } catch (err) { /* retry silently */ }
+    } catch (err) {}
 }
 
 // ── Load and render results ───────────────────────────────────────
@@ -295,7 +319,6 @@ async function loadResults(scanId, severity) {
     const data = await resp.json();
     renderResults(data, severity);
 }
-
 async function loadScan(scanId) {
     const resp = await fetch(`/scan-results/${scanId}/`);
     const data = await resp.json();
@@ -305,7 +328,6 @@ async function loadScan(scanId) {
 
 function renderResults(data, severity) {
     const r = data.results || {};
-
     setText('out-nmap',     r.nmap_raw      || 'No data');
     setList('out-nuclei',   r.nuclei        || []);
     setList('out-zap',      r.zap           || []);
@@ -328,28 +350,23 @@ function renderResults(data, severity) {
     if (['CRITICAL','HIGH'].includes(severity)) {
         document.getElementById('attackArea').style.display = 'block';
     }
-
     document.getElementById('reportBtn').style.display    = 'inline-block';
     document.getElementById('progressArea').style.display = 'none';
     document.getElementById('resultsArea').style.display  = 'block';
     resetBtn();
 }
 
-function setText(id, text) {
-    document.getElementById(id).textContent = text;
-}
+function setText(id, t) { document.getElementById(id).textContent = t; }
 function setList(id, arr) {
     document.getElementById(id).textContent =
         arr.length ? arr.join('\n') : '[INFO] No findings';
 }
-function markTab(name, arr, alertKeys) {
+function markTab(name, arr, keys) {
     const tab = document.getElementById('tab-' + name);
     if (!tab || !arr || !arr.length) return;
     const text = arr.join(' ');
-    tab.classList.add(alertKeys.some(k => text.includes(k)) ? 'critical' : 'has-data');
+    tab.classList.add(keys.some(k => text.includes(k)) ? 'critical' : 'has-data');
 }
-
-// ── Tab switching ─────────────────────────────────────────────────
 function showTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
@@ -357,80 +374,74 @@ function showTab(name) {
     event.target.classList.add('active');
 }
 
-// ── Generate report — async, polls for completion ─────────────────
+// ── Generate report — async, displays inline ──────────────────────
 async function generateReport() {
     if (!currentScanId) return;
     const btn = document.getElementById('reportBtn');
     btn.textContent = 'QUEUING REPORT...';
     btn.disabled    = true;
 
+    // Hide previous report
+    document.getElementById('reportOutput').style.display = 'none';
+
     try {
         const resp = await fetch(`/generate-report/${currentScanId}/`);
         const data = await resp.json();
 
         if (!data.task_id) {
-            alert('Failed to start report: ' + (data.error || 'Unknown error'));
+            alert('Failed to start report: ' + (data.error || 'Unknown'));
             btn.textContent = 'GENERATE REPORT';
             btn.disabled    = false;
             return;
         }
 
-        btn.textContent = 'GENERATING REPORT...';
+        btn.textContent = 'GENERATING...';
 
-        // Poll every 5 seconds
         const reportPoll = setInterval(async () => {
-            const sr = await fetch(`/report-status/${data.task_id}/`);
-            const sd = await sr.json();
+            try {
+                const sr = await fetch(`/report-status/${data.task_id}/`);
+                const sd = await sr.json();
 
-            if (sd.state === 'PROGRESS') {
-                btn.textContent = sd.message || 'GENERATING...';
+                if (sd.state === 'PROGRESS') {
+                    btn.textContent = (sd.message || 'GENERATING...').substring(0, 30) + '...';
 
-            } else if (sd.state === 'SUCCESS') {
-                clearInterval(reportPoll);
-                btn.textContent = 'GENERATE REPORT';
-                btn.disabled    = false;
+                } else if (sd.state === 'SUCCESS') {
+                    clearInterval(reportPoll);
+                    btn.textContent = 'GENERATE REPORT';
+                    btn.disabled    = false;
 
-                // Open pentest report in new tab
-                if (sd.pentest_report) {
-                    const win = window.open('', '_blank');
-                    win.document.write(`
-                        <html><head><title>AEGIS Pentest Report</title>
-                        <style>
-                            body{background:#fff;color:#111;font-family:Arial,sans-serif;
-                                 max-width:900px;margin:40px auto;padding:20px;line-height:1.6}
-                            h1{color:#1a1a2e;border-bottom:3px solid #cc0000;padding-bottom:10px}
-                            h2{color:#cc0000;margin-top:30px}
-                            h3{color:#1a1a2e}
-                            pre{background:#f5f5f5;padding:15px;border-left:4px solid #cc0000;
-                                overflow-x:auto;font-size:13px}
-                            table{border-collapse:collapse;width:100%}
-                            td,th{border:1px solid #ddd;padding:8px;text-align:left}
-                            th{background:#1a1a2e;color:white}
-                        </style></head>
-                        <body>
-                        <div style="background:#cc0000;color:white;padding:15px;margin-bottom:20px">
-                            <h2 style="color:white;margin:0">🔒 AEGIS-AI Security Assessment Report</h2>
-                            <p style="margin:5px 0">Generated by AEGIS-AI Framework | CONFIDENTIAL</p>
-                        </div>
-                        ${markdownToHtml(sd.pentest_report)}
-                        ${sd.dfir_report ? '<hr><h2 style="color:#cc0000">INCIDENT RESPONSE REPORT</h2>' + markdownToHtml(sd.dfir_report) : ''}
-                        <hr>
-                        <p><a href="/download-report/${currentScanId}/" 
-                             style="background:#cc0000;color:white;padding:10px 20px;
-                                    text-decoration:none;border-radius:4px">
-                            ⬇ Download PDF Report
-                        </a></p>
-                        </body></html>
-                    `);
-                    win.document.close();
+                    // Display report inline — no popup blocker issues
+                    if (sd.pentest_report) {
+                        document.getElementById('reportContent').innerHTML =
+                            markdownToHtml(sd.pentest_report);
+
+                        const dfirDiv = document.getElementById('dfirContent');
+                        if (sd.dfir_report) {
+                            dfirDiv.innerHTML =
+                                '<h2 style="color:#cc0000">Incident Response Report</h2>' +
+                                markdownToHtml(sd.dfir_report);
+                            dfirDiv.style.display = 'block';
+                        } else {
+                            dfirDiv.style.display = 'none';
+                        }
+
+                        const pdfLink = document.getElementById('pdfLink');
+                        pdfLink.href = `/download-report/${currentScanId}/`;
+                        pdfLink.style.display = 'inline-block';
+
+                        document.getElementById('reportOutput').style.display = 'block';
+                        document.getElementById('reportOutput').scrollIntoView(
+                            {behavior: 'smooth'}
+                        );
+                    }
+
+                } else if (sd.state === 'FAILURE') {
+                    clearInterval(reportPoll);
+                    alert('Report failed: ' + sd.message);
+                    btn.textContent = 'GENERATE REPORT';
+                    btn.disabled    = false;
                 }
-
-            } else if (sd.state === 'FAILURE') {
-                clearInterval(reportPoll);
-                alert('Report generation failed: ' + sd.message);
-                btn.textContent = 'GENERATE REPORT';
-                btn.disabled    = false;
-            }
+            } catch (err) {}
         }, 5000);
 
     } catch (err) {
@@ -440,28 +451,35 @@ async function generateReport() {
     }
 }
 
-// Simple markdown to HTML converter for report display
+// Markdown → HTML
 function markdownToHtml(md) {
-    if (!md) return '';
-    return md
-        .replace(/^# (.+)$/gm,   '<h1>$1</h1>')
-        .replace(/^## (.+)$/gm,  '<h2>$1</h2>')
-        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    if (!md) return '<p>No report content</p>';
+    let html = md
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+        .replace(/^### (.+)$/gm,  '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm,   '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm,    '<h1>$1</h1>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/`(.+?)`/g,     '<code>$1</code>')
-        .replace(/^- (.+)$/gm,   '<li>$1</li>')
-        .replace(/\n\n/g,        '<br><br>')
-        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+        .replace(/`(.+?)`/g,       '<code>$1</code>')
+        .replace(/^\| (.+)$/gm,    '<tr><td>$1</td></tr>')
+        .replace(/^- (.+)$/gm,     '<li>$1</li>')
+        .replace(/^(\d+)\. (.+)$/gm,'<li>$1. $2</li>')
+        .replace(/(<li>[\s\S]*?<\/li>)+/g, '<ul>$&</ul>')
+        .replace(/\n\n+/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+    return '<p>' + html + '</p>';
 }
 
 // ── Initiate attack ───────────────────────────────────────────────
 async function initiateAttack() {
     if (!currentScanId) return;
-    if (!confirm('Initiate AI-powered breach sequence?\n\nAI will analyse vulnerabilities and automatically select and execute the best attack tools.\n\nLab environments only.')) return;
+    if (!confirm('Initiate AI-powered breach sequence?\n\nAI will analyse vulnerabilities and automatically execute attacks.\n\nLab environments only.')) return;
 
     const attackBtn = document.getElementById('attackArea').querySelector('button');
     attackBtn.textContent = 'AI PLANNING ATTACK...';
-    attackBtn.disabled = true;
+    attackBtn.disabled    = true;
 
     document.getElementById('progressArea').style.display = 'block';
     document.getElementById('progressFill').style.width   = '0%';
@@ -476,32 +494,37 @@ async function initiateAttack() {
         const data = await resp.json();
 
         if (data.task_id) {
-            // Poll attack progress
             const attackPoll = setInterval(async () => {
-                const sr = await fetch(`/attack-status/${data.task_id}/`);
-                const sd = await sr.json();
+                try {
+                    const sr = await fetch(`/attack-status/${data.task_id}/`);
+                    const sd = await sr.json();
 
-                if (sd.state === 'PROGRESS') {
-                    document.getElementById('progressFill').style.width = sd.progress + '%';
-                    document.getElementById('progressMsg').textContent  = sd.message;
-
-                } else if (sd.state === 'SUCCESS') {
-                    clearInterval(attackPoll);
-                    document.getElementById('progressFill').style.width = '100%';
-                    document.getElementById('progressMsg').textContent  = 'Attack sequence complete!';
-                    attackBtn.textContent = 'BREACH COMPLETE — VIEW RESULTS';
-                    attackBtn.disabled    = false;
-
-                    // Reload results to show attack data
-                    await loadResults(currentScanId, null);
-                    alert(`Attack complete!\n\nAttacks run: ${sd.attacks_run}\nSuccessful: ${sd.successful}\n\n${sd.ai_summary}`);
-
-                } else if (sd.state === 'FAILURE') {
-                    clearInterval(attackPoll);
-                    showError('Attack failed: ' + sd.message);
-                    attackBtn.textContent = 'EXECUTE BREACH SEQUENCE';
-                    attackBtn.disabled    = false;
-                }
+                    if (sd.state === 'PROGRESS') {
+                        document.getElementById('progressFill').style.width =
+                            sd.progress + '%';
+                        document.getElementById('progressMsg').textContent =
+                            sd.message;
+                    } else if (sd.state === 'SUCCESS') {
+                        clearInterval(attackPoll);
+                        document.getElementById('progressFill').style.width = '100%';
+                        document.getElementById('progressMsg').textContent  =
+                            'Attack sequence complete!';
+                        attackBtn.textContent = 'BREACH COMPLETE — RUN AGAIN';
+                        attackBtn.disabled    = false;
+                        await loadResults(currentScanId, null);
+                        alert(
+                            `Attack complete!\n\n` +
+                            `Attacks run: ${sd.attacks_run}\n` +
+                            `Successful:  ${sd.successful}\n\n` +
+                            `${sd.ai_summary}`
+                        );
+                    } else if (sd.state === 'FAILURE') {
+                        clearInterval(attackPoll);
+                        showError('Attack failed: ' + sd.message);
+                        attackBtn.textContent = 'EXECUTE BREACH SEQUENCE';
+                        attackBtn.disabled    = false;
+                    }
+                } catch (err) {}
             }, 3000);
         } else {
             showError(data.error || 'Failed to start attack');
@@ -532,15 +555,13 @@ setInterval(async () => {
         const resp = await fetch('/live-traffic/');
         const data = await resp.json();
         if (!data.traffic || !data.traffic.length) return;
-
         const box = document.getElementById('trafficBox');
         box.innerHTML = [...data.traffic].reverse().map(p => {
             const cls   = p.severity === 'CRITICAL' ? 't-critical'
-                        : p.severity === 'HIGH'     ? 't-high'
-                        : 't-normal';
-            const alert = p.alert !== 'NORMAL' ? ` [${p.alert}]` : '';
+                        : p.severity === 'HIGH'     ? 't-high' : 't-normal';
+            const alrt  = p.alert !== 'NORMAL' ? ` [${p.alert}]` : '';
             const ports = p.dst_port ? `:${p.dst_port}` : '';
-            return `<div class="${cls}">[${(p.timestamp||'').slice(11,19)}]${alert} `
+            return `<div class="${cls}">[${(p.timestamp||'').slice(11,19)}]${alrt} `
                  + `${p.source} → ${p.destination}${ports} `
                  + `(${p.protocol_name||'IP'}, ${p.size}B)</div>`;
         }).join('');
@@ -548,6 +569,5 @@ setInterval(async () => {
     } catch (e) {}
 }, 3000);
 </script>
-
 </body>
 </html>

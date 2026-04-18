@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-04-13T19:29:37.332463",
+  "target": "127.0.0.1",
+  "vulnerability": "Weak/Default Credentials on PostgreSQL",
+  "tool": "hydra",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "Hydra v9.6 (c) 2023 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).\n\nHydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2026-04-13 19:29:37\n[ERROR] Unknown service: postgresql\n",
+    "credentials": [],
+    "service": "postgresql",
+    "port": 5432,
+    "vulnerability": "Weak/Default Credentials on PostgreSQL",
+    "tool": "hydra"
+  }
+}

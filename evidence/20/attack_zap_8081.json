@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-04-14T06:49:46.472283",
+  "target": "localhost",
+  "vulnerability": "missing security headers on port 8081",
+  "tool": "zap",
+  "module": "N/A",
+  "result": {
+    "success": false,
+    "output": "ZAP error: Expecting value: line 1 column 1 (char 0)",
+    "vulnerability": "missing security headers on port 8081",
+    "tool": "zap",
+    "port": 8081
+  }
+}

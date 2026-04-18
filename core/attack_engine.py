@@ -120,10 +120,16 @@ class AttackOrchestrator:
     def _run_metasploit(self, attack: dict) -> dict:
         module  = attack.get("module", "")
         options = attack.get("options", {})
+        # Normalise RHOST → RHOSTS (AI sometimes uses wrong option name)
+        if "RHOST" in options and "RHOSTS" not in options:
+            options["RHOSTS"] = options.pop("RHOST")
         payload = attack.get("payload", "")
 
+        # BETTER — trust the AI's options, fall back cleanly
         if "RHOSTS" not in options:
             options["RHOSTS"] = self.target
+        if "RPORT" not in options and attack.get("port"):
+            options["RPORT"] = str(attack.get("port"))
 
         try:
             from pymetasploit3.msfrpc import MsfRpcClient
@@ -394,33 +400,70 @@ class AttackOrchestrator:
     def _manual_instructions(self, attack: dict) -> dict:
         command = attack.get("command", "")
 
-        # FIX: if it's a curl command, actually execute it
+        # Execute curl commands automatically but safely
         if command and command.strip().startswith("curl"):
+            import re
+
+            # Save output to evidence folder — prevents overwriting project files
+            # (AI sometimes generates: curl http://target/.env -o .env which would
+            #  overwrite your actual .env file)
+            safe_output_path = f"{self.evidence_dir}/curl_output_{attack.get('port', 0)}.txt"
+            os.makedirs(self.evidence_dir, exist_ok=True)
+
+            # Replace any -o <filename> with our safe path
+            safe_command = re.sub(r'-o\s+\S+', f'-o {safe_output_path}', command)
+            # If no -o flag exists, add one
+            if ' -o ' not in safe_command and ' -O' not in safe_command:
+                safe_command = command + f' -o {safe_output_path}'
+
             try:
                 result = subprocess.run(
-                    command,
+                    safe_command,
                     shell=True,
                     capture_output=True,
                     text=True,
                     timeout=30
                 )
-                output  = result.stdout[:2000] or result.stderr[:500]
-                # Better success check — look for actual sensitive content
-                success = (result.returncode == 0 
-                        and len(output) > 10
-                        and any(keyword in output.lower() 
-                                for keyword in ['api_key', 'password', 'secret', 'token', 
-                                                'database', 'db_pass', 'aws_', '=']))
+
+                # Read the saved file for content analysis
+                output = ""
+                if os.path.exists(safe_output_path):
+                    with open(safe_output_path, 'r', errors='ignore') as f:
+                        output = f.read(2000)
+                if not output:
+                    output = result.stdout[:2000] or result.stderr[:500]
+
+                # Only count as success if actual sensitive content found
+                sensitive_keywords = [
+                    'api_key', 'api_secret', 'password', 'passwd', 'secret',
+                    'token', 'database', 'db_pass', 'db_user', 'aws_',
+                    'private_key', 'auth_key', 'access_key', 'smtp_',
+                    'key=', 'pass=', 'secret=', 'token='
+                ]
+                success = (
+                    result.returncode == 0
+                    and len(output) > 50
+                    and any(kw in output.lower() for kw in sensitive_keywords)
+                )
+
                 return {
                     "success": success,
-                    "output":  f"[EXECUTED]\n{output}",
+                    "output":  f"[EXECUTED]\nCommand: {command}\n\n{output}",
                     "tool":    "manual",
-                    "command": command
+                    "command": safe_command,
+                    "evidence_file": safe_output_path
                 }
-            except Exception:
-                pass   # fall through to instructions if execution fails
 
-        # Otherwise return instructions for manual execution
+            except subprocess.TimeoutExpired:
+                return {
+                    "success": False,
+                    "output":  "[TIMEOUT] curl command exceeded 30 seconds",
+                    "tool":    "manual"
+                }
+            except Exception as e:
+                pass  # Fall through to instructions
+
+        # For non-curl manual attacks — return instructions
         return {
             "success": None,
             "output": (

