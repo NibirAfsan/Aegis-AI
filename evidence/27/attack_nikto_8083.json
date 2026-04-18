@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-04-18T18:10:31.103939",
+  "target": "localhost",
+  "vulnerability": "Apache httpd 2.2.8 with multiple high-severity CVEs (e.g., CVE-2010-0425), TRACE method enabled, and likely vulnerable to Slowloris (CVE-2007-6750)",
+  "tool": "nikto",
+  "module": null,
+  "port": 8083,
+  "cvss": 10.0,
+  "confidence": "LOW",
+  "result": {
+    "success": true,
+    "output": "- Nikto v2.6.0\n---------------------------------------------------------------------------\n+ Your Nikto installation is out of date. Please run 'git pull' to update to the latest version of Nikto.\n+ Target IP:          127.0.0.1\n+ Target Hostname:    localhost\n+ Target Port:        8083\n+ Platform:           Unknown\n+ Start Time:         2026-04-18 18:05:01 (GMT0)\n---------------------------------------------------------------------------\n+ Server: Apache/2.2.8 (Ubuntu) DAV/2\n+ [999986] /: Retrieved x-powered-by header: PHP/5.2.4-2ubuntu5.10.\n+ [750500] /icons/: Directory indexing found.\n+ No CGI Directories found (use '-C all' to force check all possible dirs). CGI tests skipped.\n+ [999100] /index: Uncommon header(s) 'tcn' found, with contents: list.\n+ [999965] /index: Apache mod_negotiation is enabled with MultiViews, which allows attackers to easily brute force file names. The following alternatives for 'index' were found: index.php. See: http://www.wisec.it/sectou.php?id=4698ebdc59d15,https://exchange.xforce.ibmcloud.com/vulnerabilities/8275\n+ [013587] /: Suggested security header missing: content-security-policy. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP\n+ [013587] /: Suggested security header missing: x-content-type-options. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options\n+ [013587] /: Suggested security header missing: referrer-policy. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy\n+ [013587] /: Suggested security header missing: permissions-policy. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy\n+ [013587] /: Suggested security header missing: strict-transport-security. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security\n+ [600050] Apache/2.2.8 appears to be outdated (current is at least 2.4.66).\n+ [600625] PHP/5.2.4-2ubuntu5.10 appears to be outdated (current is at least 8.5.1).\n+ [999967] /: Web Server returns a valid response with junk HTTP methods which may cause false positives.\n+ [000434] /: HTTP TRACE method is active and replies which suggests the host is vulnerable to XST. See: https://owasp.org/www-community/attacks/Cross_Site_Tracing\n+ [750510] /phpinfo.php: Output from the phpinfo() function was found.\n+ [750500] /doc/: Directory indexing found.\n+ [001213] /doc/: The /doc/ directory is browsable. This may be /usr/doc. See: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-1999-0678\n+ [001384] /?=PHPB8B5F2A0-3C92-11d3-A3A9-4C7B08C10000: PHP Easter Eggs reveals potentially sensitive information via HTTP requests that contain specific QUERY strings. See: https://labs.detectify.com/writeups/do-you-dare-to-show-your-php-easter-egg/\n+ [001385] /?=PHPE9568F36-D428-11d2-A769-00AA001ACF42: PHP Easter Egg reveals potentially sensitive information via HTTP requests that contain specific QUERY strings. See: https://labs.detectify.com/writeups/do-you-dare-to-show-your-php-easter-egg/",
+    "output_file": "evidence/27/nikto_8083.txt",
+    "url": "http://localhost:8083",
+    "findings_count": 39,
+    "vulnerability": "Apache httpd 2.2.8 with multiple high-severity CVEs (e.g., CVE-2010-0425), TRACE method enabled, and likely vulnerable to Slowloris (CVE-2007-6750)",
+    "tool": "nikto",
+    "port": 8083
+  }
+}

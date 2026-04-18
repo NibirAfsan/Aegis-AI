@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-04-18T17:48:36.283472",
+  "target": "localhost",
+  "vulnerability": "vsftpd 2.3.4 backdoor (CVE-2011-2523) for RCE",
+  "tool": "metasploit",
+  "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+  "port": 2121,
+  "cvss": 10.0,
+  "confidence": "HIGH",
+  "result": {
+    "success": false,
+    "output": "Module executed, no session after 45s.\nJob: 0 | Module: exploit/unix/ftp/vsftpd_234_backdoor\nOptions: {\n  \"RHOSTS\": \"localhost\",\n  \"RPORT\": \"2121\"\n}\nPossible causes: target not vulnerable, firewall blocking callback, wrong payload.",
+    "module": "exploit/unix/ftp/vsftpd_234_backdoor",
+    "vulnerability": "vsftpd 2.3.4 backdoor (CVE-2011-2523) for RCE",
+    "tool": "metasploit",
+    "port": 2121
+  }
+}

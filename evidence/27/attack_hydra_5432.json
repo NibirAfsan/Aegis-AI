@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-04-18T17:54:22.578066",
+  "target": "localhost",
+  "vulnerability": "PostgreSQL 8.3.x exposed, weak credentials for access (CVE-2013-1903 highest)",
+  "tool": "hydra",
+  "module": null,
+  "port": 5432,
+  "cvss": 10.0,
+  "confidence": "MEDIUM",
+  "result": {
+    "success": false,
+    "output": "[TIMEOUT] Hydra exceeded 5 minutes",
+    "vulnerability": "PostgreSQL 8.3.x exposed, weak credentials for access (CVE-2013-1903 highest)",
+    "tool": "hydra",
+    "port": 5432
+  }
+}

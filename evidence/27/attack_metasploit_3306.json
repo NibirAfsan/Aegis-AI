@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-04-18T17:59:23.751393",
+  "target": "localhost",
+  "vulnerability": "MySQL UDF payload execution for RCE (requires credentials)",
+  "tool": "metasploit",
+  "module": "exploit/multi/mysql/mysql_udf_payload",
+  "port": 3306,
+  "cvss": 9.8,
+  "confidence": "HIGH",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: Invalid payload (cmd/unix/interact) for given target (0).\nModule: exploit/multi/mysql/mysql_udf_payload",
+    "module": "exploit/multi/mysql/mysql_udf_payload",
+    "vulnerability": "MySQL UDF payload execution for RCE (requires credentials)",
+    "tool": "metasploit",
+    "port": 3306
+  }
+}

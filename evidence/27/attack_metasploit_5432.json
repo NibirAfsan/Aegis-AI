@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-04-18T17:54:22.787006",
+  "target": "localhost",
+  "vulnerability": "PostgreSQL payload execution for RCE (requires credentials)",
+  "tool": "metasploit",
+  "module": "exploit/linux/postgres/postgres_payload",
+  "port": 5432,
+  "cvss": 10.0,
+  "confidence": "HIGH",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: Invalid payload (cmd/unix/interact) for given target (0).\nModule: exploit/linux/postgres/postgres_payload",
+    "module": "exploit/linux/postgres/postgres_payload",
+    "vulnerability": "PostgreSQL payload execution for RCE (requires credentials)",
+    "tool": "metasploit",
+    "port": 5432
+  }
+}

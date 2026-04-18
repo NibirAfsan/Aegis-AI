@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-04-18T17:48:36.854200",
+  "target": "localhost",
+  "vulnerability": "backup.tar.gz file exposed",
+  "tool": "manual",
+  "module": null,
+  "port": 8082,
+  "cvss": 9.8,
+  "confidence": "HIGH",
+  "result": {
+    "success": false,
+    "output": "[EXECUTED]\n--- curl #1: curl http://localhost:8082/backup.tar.gz --output backup.tar.gz ---\n<!--\n  ~ Copyright (c) 2014-2026 Bjoern Kimminich & the OWASP Juice Shop contributors.\n  ~ SPDX-License-Identifier: MIT\n  -->\n\n<!doctype html>\n<html lang=\"en\" data-beasties-container>\n<head>\n  <meta charset=\"utf-8\">\n  <title>OWASP Juice Shop</title>\n  <meta name=\"description\" content=\"Probably the most modern and sophisticated insecure web application\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <link id=\"favicon\" rel=\"icon\" type=\"image/x-icon\" href=\"assets/public/f\n",
+    "tool": "manual",
+    "command": "curl http://localhost:8082/backup.tar.gz --output backup.tar.gz",
+    "evidence_dir": "evidence/27",
+    "vulnerability": "backup.tar.gz file exposed",
+    "port": 8082
+  }
+}

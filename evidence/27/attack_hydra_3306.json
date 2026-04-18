@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-04-18T17:59:22.804091",
+  "target": "localhost",
+  "vulnerability": "MySQL 5.0.51a exposed, weak credentials for access (CVE-2017-15945 highest)",
+  "tool": "hydra",
+  "module": null,
+  "port": 3306,
+  "cvss": 7.8,
+  "confidence": "MEDIUM",
+  "result": {
+    "success": false,
+    "output": "[TIMEOUT] Hydra exceeded 5 minutes",
+    "vulnerability": "MySQL 5.0.51a exposed, weak credentials for access (CVE-2017-15945 highest)",
+    "tool": "hydra",
+    "port": 3306
+  }
+}

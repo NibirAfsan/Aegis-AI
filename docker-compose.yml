@@ -22,7 +22,13 @@ services:
       - "2121:21"
       - "3306:3306"
       - "5432:5432"
-      - "6200:6200" 
+      - "6200:6200"    # vsftpd 2.3.4 backdoor bind port
+      - "1524:1524"    # ingreslock root bindshell (instant root, no exploit module needed)
+      - "6667:6667"    # UnrealIRCd 3.2.8.1 backdoor
+      - "6697:6697"    # UnrealIRCd alternate/SSL port
+      - "3632:3632"    # distcc RCE (CVE-2004-2687) — most reliable through Docker NAT
+      - "1099:1099"    # Java RMI (CVE-2011-3556)
+      - "8787:8787"    # Ruby DRb (CVE-2013-0156)
     restart: unless-stopped
     platform: linux/amd64
     networks:

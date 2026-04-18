@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-04-18T18:05:01.289959",
+  "target": "localhost",
+  "vulnerability": "Apache mod_cgi potentially vulnerable to Shellshock RCE (CVE-2014-6271, CVE-2014-6278) (requires CGI detection)",
+  "tool": "metasploit",
+  "module": "exploit/multi/http/apache_mod_cgi_bash_env_exec",
+  "port": 8081,
+  "cvss": 10.0,
+  "confidence": "MEDIUM",
+  "result": {
+    "success": false,
+    "output": "Metasploit error: Invalid payload (cmd/unix/reverse_bash) for given target (0).\nModule: exploit/multi/http/apache_mod_cgi_bash_env_exec",
+    "module": "exploit/multi/http/apache_mod_cgi_bash_env_exec",
+    "vulnerability": "Apache mod_cgi potentially vulnerable to Shellshock RCE (CVE-2014-6271, CVE-2014-6278) (requires CGI detection)",
+    "tool": "metasploit",
+    "port": 8081
+  }
+}
