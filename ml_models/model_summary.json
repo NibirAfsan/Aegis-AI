@@ -1,0 +1,37 @@
+{
+  "model_type": "RandomForestClassifier",
+  "n_estimators": 100,
+  "max_depth": 20,
+  "dataset": "CIC-IDS2017",
+  "total_samples": 2827876,
+  "train_samples": 2262300,
+  "test_samples": 565576,
+  "n_features": 70,
+  "n_classes": 10,
+  "classes": [
+    "BOTNET",
+    "BRUTE_FORCE",
+    "DDOS",
+    "DOS",
+    "HEARTBLEED",
+    "INFILTRATION",
+    "NORMAL",
+    "PORT_SCAN",
+    "SQL_INJECTION",
+    "WEB_ATTACK"
+  ],
+  "accuracy": 0.9961136964793414,
+  "f1_weighted": 0.99711981365117,
+  "feature_importance_top10": {
+    "Avg Fwd Segment Size": 0.0256876349042445,
+    "Avg Bwd Segment Size": 0.026669438731054398,
+    "Fwd Packet Length Mean": 0.026981435949107957,
+    "Subflow Bwd Bytes": 0.02851558282276501,
+    "Total Length of Fwd Packets": 0.029514234951795365,
+    "Total Length of Bwd Packets": 0.03057408718005784,
+    "Bwd Packet Length Mean": 0.03344647104331447,
+    "min_seg_size_forward": 0.03546748999704109,
+    "Init_Win_bytes_backward": 0.05843616215509085,
+    "Destination Port": 0.10724810120561282
+  }
+}

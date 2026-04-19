@@ -1,0 +1,12 @@
+{
+  "0": "BOTNET",
+  "1": "BRUTE_FORCE",
+  "2": "DDOS",
+  "3": "DOS",
+  "4": "HEARTBLEED",
+  "5": "INFILTRATION",
+  "6": "NORMAL",
+  "7": "PORT_SCAN",
+  "8": "SQL_INJECTION",
+  "9": "WEB_ATTACK"
+}
