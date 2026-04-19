@@ -8,4 +8,11 @@ db.sqlite3
 .env
 *.env
 .env.local
-.env.production
+.env.productionHEAD
+backup.sql
+backup.tar.gz
+backup.zip
+config.yml
+git_config
+hydra.restore
+evidence/
