@@ -1,13 +1,7 @@
 """
 AEGIS scanner_ui/views.py
 ==========================
-Phase 3 complete — async scan, async attack, async report generation.
-
-FIXES:
-  1. generate_report() is now async via Celery — never hangs the browser
-  2. PDF report generation added (reportlab)
-  3. Evidence proof shown in reports
-  4. Report status polling endpoint added
+Phase 3 + Phase 4 — offensive engine + SIEM defensive monitor.
 """
 
 from django.shortcuts import render
@@ -151,16 +145,11 @@ def attack_status(request, task_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# REPORT — async via Celery so browser never hangs
+# REPORT — async via Celery
 # ─────────────────────────────────────────────────────────────────────────────
 
 @csrf_exempt
 def generate_report(request, scan_id):
-    """
-    Fires report generation as a background Celery task.
-    Returns task_id immediately — browser polls /report-status/<task_id>/.
-    This prevents the 10-minute hang.
-    """
     try:
         scan = ScanResult.objects.get(id=scan_id)
     except ScanResult.DoesNotExist:
@@ -170,12 +159,11 @@ def generate_report(request, scan_id):
     return JsonResponse({
         "status":  "QUEUED",
         "task_id": task.id,
-        "message": "Report generation started. This takes 1-2 minutes..."
+        "message": "Report generation started..."
     })
 
 
 def report_status(request, task_id):
-    """Polls report generation progress."""
     task  = AsyncResult(task_id)
     state = task.state
 
@@ -203,10 +191,6 @@ def report_status(request, task_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def download_report_pdf(request, scan_id):
-    """
-    Generates and downloads a professional PDF pentest report.
-    Uses the stored ai_report from the database.
-    """
     try:
         scan = ScanResult.objects.get(id=scan_id)
     except ScanResult.DoesNotExist:
@@ -221,16 +205,11 @@ def download_report_pdf(request, scan_id):
             f'attachment; filename="AEGIS_Report_{scan.target}_{scan.timestamp:%Y%m%d}.pdf"'
         )
         return response
-
     except Exception as e:
-        return JsonResponse({"error": f"PDF generation failed: {str(e)}"}, status=500)
+        return JsonResponse({"error": f"PDF failed: {str(e)}"}, status=500)
 
 
 def _generate_pdf(scan, report_text: str) -> bytes:
-    """
-    Generates a professional PDF report using ReportLab.
-    Styled like a real security consultancy report.
-    """
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import cm
@@ -241,66 +220,29 @@ def _generate_pdf(scan, report_text: str) -> bytes:
     import io
 
     buffer = io.BytesIO()
-    doc    = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=2*cm, leftMargin=2*cm,
-        topMargin=2*cm, bottomMargin=2*cm
-    )
+    doc    = SimpleDocTemplate(buffer, pagesize=A4,
+                               rightMargin=2*cm, leftMargin=2*cm,
+                               topMargin=2*cm, bottomMargin=2*cm)
 
     styles = getSampleStyleSheet()
-
-    # Custom styles
-    title_style = ParagraphStyle(
-        'AegisTitle',
-        parent=styles['Title'],
-        fontSize=24,
-        textColor=colors.HexColor('#1a1a2e'),
-        spaceAfter=6,
-        alignment=TA_CENTER
-    )
-    subtitle_style = ParagraphStyle(
-        'AegisSubtitle',
-        parent=styles['Normal'],
-        fontSize=11,
-        textColor=colors.HexColor('#cc0000'),
-        alignment=TA_CENTER,
-        spaceAfter=20
-    )
-    h1_style = ParagraphStyle(
-        'AegisH1',
-        parent=styles['Heading1'],
-        fontSize=14,
-        textColor=colors.HexColor('#1a1a2e'),
-        spaceBefore=16,
-        spaceAfter=6,
-        borderPad=4
-    )
-    h2_style = ParagraphStyle(
-        'AegisH2',
-        parent=styles['Heading2'],
-        fontSize=12,
-        textColor=colors.HexColor('#cc0000'),
-        spaceBefore=12,
-        spaceAfter=4
-    )
-    body_style = ParagraphStyle(
-        'AegisBody',
-        parent=styles['Normal'],
-        fontSize=10,
-        spaceAfter=6,
-        leading=14
-    )
-    code_style = ParagraphStyle(
-        'AegisCode',
-        parent=styles['Code'],
-        fontSize=8,
-        backColor=colors.HexColor('#f5f5f5'),
-        borderColor=colors.HexColor('#cccccc'),
-        borderWidth=1,
-        borderPad=4,
-        spaceAfter=6
-    )
+    title_style = ParagraphStyle('AegisTitle', parent=styles['Title'],
+                                  fontSize=24, textColor=colors.HexColor('#1a1a2e'),
+                                  spaceAfter=6, alignment=TA_CENTER)
+    subtitle_style = ParagraphStyle('AegisSub', parent=styles['Normal'],
+                                     fontSize=11, textColor=colors.HexColor('#cc0000'),
+                                     alignment=TA_CENTER, spaceAfter=20)
+    h1_style = ParagraphStyle('AegisH1', parent=styles['Heading1'],
+                               fontSize=14, textColor=colors.HexColor('#1a1a2e'),
+                               spaceBefore=16, spaceAfter=6)
+    h2_style = ParagraphStyle('AegisH2', parent=styles['Heading2'],
+                               fontSize=12, textColor=colors.HexColor('#cc0000'),
+                               spaceBefore=12, spaceAfter=4)
+    body_style = ParagraphStyle('AegisBody', parent=styles['Normal'],
+                                 fontSize=10, spaceAfter=6, leading=14)
+    code_style = ParagraphStyle('AegisCode', parent=styles['Code'],
+                                 fontSize=8, backColor=colors.HexColor('#f5f5f5'),
+                                 borderColor=colors.HexColor('#cccccc'),
+                                 borderWidth=1, borderPad=4, spaceAfter=6)
 
     severity_colours = {
         'CRITICAL': colors.HexColor('#cc0000'),
@@ -312,8 +254,6 @@ def _generate_pdf(scan, report_text: str) -> bytes:
     sev_colour = severity_colours.get(scan.severity or 'INFO', colors.grey)
 
     elements = []
-
-    # ── Cover section ────────────────────────────────────────────────────────
     elements.append(Spacer(1, 1*cm))
     elements.append(Paragraph("AEGIS-AI", title_style))
     elements.append(Paragraph("Security Assessment Report", subtitle_style))
@@ -321,14 +261,13 @@ def _generate_pdf(scan, report_text: str) -> bytes:
                                 color=colors.HexColor('#cc0000')))
     elements.append(Spacer(1, 0.5*cm))
 
-    # Metadata table
     meta_data = [
-        ["Target",        scan.target],
-        ["Scan Mode",     scan.scan_mode.upper()],
-        ["Overall Risk",  scan.severity or "Unknown"],
-        ["Date",          scan.timestamp.strftime("%Y-%m-%d %H:%M UTC")],
-        ["Classification","CONFIDENTIAL"],
-        ["Framework",     "AEGIS-AI Automated Penetration Testing"],
+        ["Target",         scan.target],
+        ["Scan Mode",      scan.scan_mode.upper()],
+        ["Overall Risk",   scan.severity or "Unknown"],
+        ["Date",           scan.timestamp.strftime("%Y-%m-%d %H:%M UTC")],
+        ["Classification", "CONFIDENTIAL"],
+        ["Framework",      "AEGIS-AI Automated Penetration Testing"],
     ]
     meta_table = Table(meta_data, colWidths=[5*cm, 12*cm])
     meta_table.setStyle(TableStyle([
@@ -343,9 +282,8 @@ def _generate_pdf(scan, report_text: str) -> bytes:
     elements.append(meta_table)
     elements.append(Spacer(1, 0.5*cm))
 
-    # Severity badge
-    sev_data   = [[f"  OVERALL RISK: {scan.severity or 'UNKNOWN'}  "]]
-    sev_table  = Table(sev_data, colWidths=[17*cm])
+    sev_data  = [[f"  OVERALL RISK: {scan.severity or 'UNKNOWN'}  "]]
+    sev_table = Table(sev_data, colWidths=[17*cm])
     sev_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), sev_colour),
         ('TEXTCOLOR',  (0, 0), (-1, -1), colors.white),
@@ -358,7 +296,6 @@ def _generate_pdf(scan, report_text: str) -> bytes:
     elements.append(Spacer(1, 1*cm))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
 
-    # ── Report body — parse Markdown roughly ─────────────────────────────────
     for line in report_text.splitlines():
         line = line.strip()
         if not line:
@@ -370,40 +307,34 @@ def _generate_pdf(scan, report_text: str) -> bytes:
         elif line.startswith("### "):
             elements.append(Paragraph(line[4:], styles['Heading3']))
         elif line.startswith("```") or line.startswith("    "):
-            elements.append(Paragraph(line.replace("<", "&lt;").replace(">", "&gt;"),
-                                       code_style))
+            elements.append(Paragraph(
+                line.replace("<", "&lt;").replace(">", "&gt;"), code_style))
         elif line.startswith("| "):
-            # Simple table row — just render as body text
             elements.append(Paragraph(line, body_style))
         elif line.startswith("- ") or line.startswith("* "):
-            elements.append(Paragraph(f"• {line[2:]}", body_style))
+            elements.append(Paragraph(f"&bull; {line[2:]}", body_style))
         elif line.startswith("**") and line.endswith("**"):
             elements.append(Paragraph(f"<b>{line[2:-2]}</b>", body_style))
         else:
-            # Escape HTML special chars
             safe = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             elements.append(Paragraph(safe, body_style))
 
-    # ── Footer ───────────────────────────────────────────────────────────────
     elements.append(Spacer(1, 1*cm))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
     elements.append(Paragraph(
         f"Generated by AEGIS-AI Framework | {scan.timestamp:%Y-%m-%d} | CONFIDENTIAL",
-        ParagraphStyle('footer', parent=styles['Normal'],
-                       fontSize=8, textColor=colors.grey,
-                       alignment=TA_CENTER)
-    ))
+        ParagraphStyle('footer', parent=styles['Normal'], fontSize=8,
+                       textColor=colors.grey, alignment=TA_CENTER)))
 
     doc.build(elements)
     return buffer.getvalue()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ATTACK PLAN VIEWER (debug/development)
+# ATTACK PLAN VIEWER
 # ─────────────────────────────────────────────────────────────────────────────
 
 def view_attack_plan(request, scan_id):
-    """Shows the AI-generated attack plan for a completed attack."""
     try:
         scan = ScanResult.objects.get(id=scan_id)
         plan = scan.raw_data.get("attack_plan", {})
@@ -413,13 +344,13 @@ def view_attack_plan(request, scan_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# LIVE TRAFFIC
+# LIVE TRAFFIC — Phase 4: now includes ML classification
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_live_traffic(request):
     try:
         from core.aegis_listener import get_recent_packets
-        packets = get_recent_packets(10)
+        packets = get_recent_packets(50)
         if packets:
             return JsonResponse({'traffic': packets})
     except Exception:
@@ -439,11 +370,65 @@ def get_live_traffic(request):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SIEM ENDPOINTS — Phase 4: ML-powered threat monitoring
+# ─────────────────────────────────────────────────────────────────────────────
+
+def siem_threat_summary(request):
+    """Returns ML threat statistics for the SIEM dashboard widgets."""
+    try:
+        from core.ml_detector import get_threat_summary, get_model_info
+        summary = get_threat_summary()
+        summary["model_info"] = get_model_info()
+        return JsonResponse(summary)
+    except Exception as e:
+        return JsonResponse({
+            "total_packets": 0, "total_threats": 0,
+            "critical_alerts": 0, "by_category": {},
+            "error": str(e)
+        })
+
+
+def siem_alerts(request):
+    """Returns recent ML-classified threat alerts."""
+    try:
+        from core.ml_detector import get_recent_alerts
+        count = int(request.GET.get('count', 50))
+        alerts = get_recent_alerts(count)
+        return JsonResponse({"alerts": alerts, "count": len(alerts)})
+    except Exception as e:
+        return JsonResponse({"alerts": [], "error": str(e)})
+
+
+@csrf_exempt
+def siem_playbook(request):
+    """Generates an AI response playbook for a specific attack type."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        attack_type = data.get("attack_type", "UNKNOWN")
+        details = data.get("details", {})
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    try:
+        from core.ml_detector import generate_response_playbook
+        playbook = generate_response_playbook(attack_type, details)
+        return JsonResponse({
+            "status": "ok",
+            "attack_type": attack_type,
+            "playbook": playbook
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _build_text_report(scan, results: dict) -> str:
-    """Fallback text report — used when AI is unavailable."""
     lines = [
         "=" * 60,
         "  AEGIS SECURITY ASSESSMENT REPORT",
@@ -452,11 +437,9 @@ def _build_text_report(scan, results: dict) -> str:
         f"  Mode     : {scan.scan_mode}",
         f"  Severity : {scan.severity or 'Unknown'}",
         f"  Date     : {scan.timestamp:%Y-%m-%d %H:%M}",
-        "=" * 60,
-        "",
+        "=" * 60, "",
         "[1] NETWORK SCAN (NMAP)",
-        results.get("nmap_raw", "No data"),
-        "",
+        results.get("nmap_raw", "No data"), "",
         "[2] NUCLEI FINDINGS",
     ]
     lines += results.get("nuclei", ["No findings"])
@@ -476,23 +459,17 @@ def _build_text_report(scan, results: dict) -> str:
     attack_results = results.get("attack_results", {})
     if attack_results:
         lines += [
-            "",
-            "[9] ATTACK RESULTS — PROOF OF EXPLOITATION",
-            f"  Total attacks:     {attack_results.get('attacks_run', 0)}",
-            f"  Successful:        {attack_results.get('successful', 0)}",
-            "",
+            "", "[9] ATTACK RESULTS",
+            f"  Total: {attack_results.get('attacks_run', 0)}",
+            f"  Successful: {attack_results.get('successful', 0)}", "",
         ]
         for r in attack_results.get("results", []):
-            status = "✓ SUCCESSFUL" if r.get("success") else "✗ FAILED"
-            lines.append(
-                f"  [{status}] {r.get('tool','?').upper()} "
-                f"on port {r.get('port','?')}"
-            )
-            lines.append(f"  Vulnerability: {r.get('vulnerability','')}")
+            status = "SUCCESS" if r.get("success") else "FAILED"
+            lines.append(f"  [{status}] {r.get('tool','?').upper()} "
+                         f"port {r.get('port','?')}")
+            lines.append(f"  Vuln: {r.get('vulnerability','')}")
             if r.get("output"):
                 lines.append(f"  Evidence:\n    {r['output'][:400]}")
-            if r.get("credentials"):
-                lines.append(f"  Credentials: {r['credentials']}")
             lines.append("")
 
     return "\n".join(str(l) for l in lines)
