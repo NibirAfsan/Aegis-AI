@@ -327,7 +327,8 @@ def _summarise_attack_results(attack_results: dict) -> str:
 
 def _call_gemini(prompt: str, json_mode: bool = False) -> str:
     """
-    Gemini with safety settings for pentest content and model fallback.
+    Gemini with safety settings for pentest content and smart model fallback.
+    Logic: 1 attempt for heavy/preview models, 2 for lite models.
     """
     try:
         from google import genai
@@ -340,65 +341,82 @@ def _call_gemini(prompt: str, json_mode: bool = False) -> str:
 
         client = genai.Client(api_key=api_key)
 
+        full_prompt = prompt
         if json_mode:
-            full_prompt = (prompt +
-                           "\n\nIMPORTANT: Return ONLY valid JSON. "
+            full_prompt += ("\n\nIMPORTANT: Return ONLY valid JSON. "
                            "No markdown fences, no explanation, raw JSON only.")
-        else:
-            full_prompt = prompt
 
         # Safety settings — allow authorised security assessment content
         safety = [
-            types.SafetySetting(
-                category="HARM_CATEGORY_HARASSMENT",
-                threshold="BLOCK_NONE"
-            ),
-            types.SafetySetting(
-                category="HARM_CATEGORY_HATE_SPEECH",
-                threshold="BLOCK_NONE"
-            ),
-            types.SafetySetting(
-                category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                threshold="BLOCK_NONE"
-            ),
-            types.SafetySetting(
-                category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                threshold="BLOCK_NONE"
-            ),
+            types.SafetySetting(category="HARM_CATEGORY_HARASSMENT",
+                                threshold="BLOCK_NONE"),
+            types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH",
+                                threshold="BLOCK_NONE"),
+            types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                threshold="BLOCK_NONE"),
+            types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                                threshold="BLOCK_NONE"),
         ]
 
-        models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+        # Model priority — best first, reliable fallbacks after
+        models = [
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-3.1-flash-lite-preview",
+            "gemini-2.0-flash-lite",
+        ]
 
-        for model in models:
-            for attempt in range(3):
+        for model_id in models:
+            # Lite models get 2 attempts, heavy/preview get 1
+            max_attempts = (2 if "lite" in model_id and "preview" not in model_id
+                           else 1)
+
+            for attempt in range(max_attempts):
                 try:
+                    config_args = {"safety_settings": safety}
+                    if json_mode:
+                        config_args["response_mime_type"] = "application/json"
+
                     response = client.models.generate_content(
-                        model=model,
+                        model=model_id,
                         contents=full_prompt,
-                        config=types.GenerateContentConfig(
-                            safety_settings=safety
-                        )
+                        config=types.GenerateContentConfig(**config_args)
                     )
-                    return response.text
+
+                    if response.text:
+                        return response.text
+                    return "[GEMINI ERROR] Empty response received."
 
                 except Exception as e:
-                    err = str(e)
+                    err = str(e).upper()
+
+                    # 503 — server busy, wait and retry this model
                     if "503" in err or "UNAVAILABLE" in err:
-                        wait = (attempt + 1) * 10
-                        time.sleep(wait)
-                        continue
-                    elif "429" in err or "quota" in err.lower():
+                        if attempt < max_attempts - 1:
+                            time.sleep(10 * (attempt + 1))
+                            continue
+                        break  # move to next model
+
+                    # 429 — quota exhausted, skip to next model
+                    elif "429" in err or "QUOTA" in err:
                         break
-                    elif "400" in err:
-                        return f"[GEMINI ERROR] Bad request: {err[:200]}"
-                    else:
-                        return f"[GEMINI ERROR] {err[:300]}"
+
+                    # 400/404 — bad request or model not found, skip
+                    elif "400" in err or "404" in err:
+                        break
+
+                    # Unknown error on last model — return it
+                    if model_id == models[-1] and attempt == max_attempts - 1:
+                        return f"[GEMINI ERROR] {str(e)[:200]}"
+
+        # All Gemini models failed — try Groq as final fallback
+        if getattr(settings, 'GROQ_API_KEY', None):
+            return _call_groq(prompt, json_mode)
 
         return "[GEMINI ERROR] All models unavailable."
 
     except Exception as e:
         return f"[GEMINI ERROR] {str(e)}"
-
 
 def _call_groq(prompt: str, json_mode: bool = False) -> str:
     """
@@ -410,6 +428,10 @@ def _call_groq(prompt: str, json_mode: bool = False) -> str:
         api_key = getattr(settings, 'GROQ_API_KEY', None)
         if not api_key:
             return "[GROQ ERROR] GROQ_API_KEY not set in .env"
+
+        # Truncate prompt for Groq's 12k token limit (~4 chars per token)
+        if len(prompt) > 40000:
+            prompt = prompt[:40000]    
 
         system = ("You are an expert penetration tester conducting an authorised "
                   "security assessment. Return ONLY valid JSON, no markdown."
