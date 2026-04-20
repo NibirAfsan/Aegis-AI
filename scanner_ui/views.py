@@ -370,30 +370,53 @@ def get_live_traffic(request):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SIEM ENDPOINTS — Phase 4: ML-powered threat monitoring
+# SIEM ENDPOINTS — Phase 4: reads from Redis (shared with listener)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def siem_threat_summary(request):
-    """Returns ML threat statistics for the SIEM dashboard widgets."""
+    """Returns ML threat statistics from Redis."""
     try:
-        from core.ml_detector import get_threat_summary, get_model_info
-        summary = get_threat_summary()
-        summary["model_info"] = get_model_info()
-        return JsonResponse(summary)
+        import redis as rd
+        r = rd.Redis(host='localhost', port=6379, db=1, decode_responses=True)
+
+        total_packets  = int(r.get("aegis:siem:total_packets") or 0)
+        total_threats  = int(r.get("aegis:siem:total_threats") or 0)
+        critical       = int(r.get("aegis:siem:critical_alerts") or 0)
+        by_category    = r.hgetall("aegis:siem:by_category") or {}
+        running        = r.get("aegis:siem:running") == "true"
+
+        # Convert category counts to ints
+        by_category = {k: int(v) for k, v in by_category.items()}
+
+        threat_rate = round(total_threats / max(total_packets, 1) * 100, 2)
+
+        return JsonResponse({
+            "total_packets":   total_packets,
+            "total_threats":   total_threats,
+            "critical_alerts": critical,
+            "by_category":     by_category,
+            "threat_rate":     threat_rate,
+            "model_accuracy":  99.61,
+            "model_classes":   10,
+            "listener_running": running,
+        })
     except Exception as e:
         return JsonResponse({
             "total_packets": 0, "total_threats": 0,
             "critical_alerts": 0, "by_category": {},
+            "threat_rate": 0.0, "model_accuracy": 99.61,
             "error": str(e)
         })
 
 
 def siem_alerts(request):
-    """Returns recent ML-classified threat alerts."""
+    """Returns recent ML-classified threat alerts from Redis."""
     try:
-        from core.ml_detector import get_recent_alerts
+        import redis as rd
+        r = rd.Redis(host='localhost', port=6379, db=1, decode_responses=True)
         count = int(request.GET.get('count', 50))
-        alerts = get_recent_alerts(count)
+        raw = r.lrange("aegis:siem:recent_alerts", 0, count - 1)
+        alerts = [json.loads(a) for a in raw]
         return JsonResponse({"alerts": alerts, "count": len(alerts)})
     except Exception as e:
         return JsonResponse({"alerts": [], "error": str(e)})
@@ -404,14 +427,12 @@ def siem_playbook(request):
     """Generates an AI response playbook for a specific attack type."""
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
-
     try:
         data = json.loads(request.body)
         attack_type = data.get("attack_type", "UNKNOWN")
         details = data.get("details", {})
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
-
     try:
         from core.ml_detector import generate_response_playbook
         playbook = generate_response_playbook(attack_type, details)
