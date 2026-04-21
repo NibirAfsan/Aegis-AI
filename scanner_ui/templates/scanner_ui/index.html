@@ -381,6 +381,15 @@
         <div class="t-normal">&gt;&gt;&gt; WAITING FOR TRAFFIC...</div>
     </div>
 
+    <div id="playbookBtn" style="display:none; margin-top:12px;">
+        <button class="btn btn-red" onclick="generatePlaybook()"
+                style="animation:none; font-family:'Orbitron',sans-serif; font-size:10px;">
+            GENERATE AI RESPONSE PLAYBOOK
+        </button>
+        <span style="font-size:10px; color:#553333; margin-left:10px;"
+              id="playbookStatus"></span>
+    </div>
+
     <!-- Response playbook panel -->
     <div id="playbookArea">
         <h3>AI INCIDENT RESPONSE PLAYBOOK</h3>
@@ -619,6 +628,62 @@ setInterval(async()=>{
         document.getElementById('siemAccuracy').textContent = (d.model_accuracy || 99.6).toFixed(1) + '%';
     } catch(e){}
 }, 5000);
+
+// ── SIEM: Show playbook button when threats detected ──────────
+setInterval(()=>{
+    const t = parseInt(document.getElementById('siemThreats').textContent||'0');
+    document.getElementById('playbookBtn').style.display = t > 0 ? 'block' : 'none';
+}, 5000);
+
+// ── SIEM: Generate response playbook ──────────────────────────
+async function generatePlaybook() {
+    const btn = document.querySelector('#playbookBtn button');
+    const status = document.getElementById('playbookStatus');
+    btn.disabled = true;
+    status.textContent = 'AI generating response...';
+
+    try {
+        // Get latest threat data from Redis
+        const alertResp = await fetch('/siem/alerts/?count=1');
+        const alertData = await alertResp.json();
+
+        let attackType = 'UNKNOWN';
+        let details = {src:'unknown', dst:'unknown', port:0, severity:'HIGH', confidence:0.85};
+
+        if (alertData.alerts && alertData.alerts.length > 0) {
+            const latest = alertData.alerts[0];
+            attackType = latest.classification || latest.ml_class || 'UNKNOWN';
+            details = {
+                src: latest.src || 'unknown',
+                dst: latest.dst || 'unknown',
+                port: latest.port || 0,
+                severity: latest.severity || 'HIGH',
+                confidence: latest.confidence || 0.85,
+                protocol: latest.protocol || 'TCP',
+                detection_method: latest.detection_method || 'hybrid'
+            };
+        }
+
+        const resp = await fetch('/siem/playbook/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({attack_type: attackType, details: details})
+        });
+        const data = await resp.json();
+
+        if (data.playbook) {
+            document.getElementById('playbookContent').innerHTML = markdownToHtml(data.playbook);
+            document.getElementById('playbookArea').style.display = 'block';
+            document.getElementById('playbookArea').scrollIntoView({behavior:'smooth'});
+            status.textContent = '';
+        } else {
+            status.textContent = 'Failed: ' + (data.error || 'Unknown');
+        }
+    } catch(e) {
+        status.textContent = 'Error: ' + e.message;
+    }
+    btn.disabled = false;
+}
 </script>
 </body>
 </html>
