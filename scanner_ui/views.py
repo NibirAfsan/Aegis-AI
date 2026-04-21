@@ -209,6 +209,27 @@ def download_report_pdf(request, scan_id):
         return JsonResponse({"error": f"PDF failed: {str(e)}"}, status=500)
 
 
+def _sanitize_for_pdf(text: str) -> str:
+    """
+    Strips markdown/HTML formatting that ReportLab can't handle.
+    Converts to plain text safe for PDF paragraphs.
+    """
+    import re
+    s = text
+    # Remove HTML tags that ReportLab chokes on (br, span, div, etc.)
+    s = re.sub(r'<br\s*/?>', ' / ', s, flags=re.IGNORECASE)
+    s = re.sub(r'</?[a-zA-Z][^>]*>', '', s)
+    # Remove markdown formatting
+    s = s.replace("**", "")
+    s = s.replace("__", "")
+    s = s.replace("`", "'")
+    # Escape XML special chars for ReportLab
+    s = s.replace("&", "&amp;")
+    s = s.replace("<", "&lt;")
+    s = s.replace(">", "&gt;")
+    return s
+
+
 def _generate_pdf(scan, report_text: str) -> bytes:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -296,28 +317,30 @@ def _generate_pdf(scan, report_text: str) -> bytes:
     elements.append(Spacer(1, 1*cm))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
 
+    # Parse report text — all lines sanitized through _sanitize_for_pdf
     for line in report_text.splitlines():
         line = line.strip()
         if not line:
             elements.append(Spacer(1, 0.2*cm))
         elif line.startswith("# "):
-            elements.append(Paragraph(line[2:], h1_style))
+            elements.append(Paragraph(_sanitize_for_pdf(line[2:]), h1_style))
         elif line.startswith("## "):
-            elements.append(Paragraph(line[3:], h2_style))
+            elements.append(Paragraph(_sanitize_for_pdf(line[3:]), h2_style))
         elif line.startswith("### "):
-            elements.append(Paragraph(line[4:], styles['Heading3']))
-        elif line.startswith("```") or line.startswith("    "):
             elements.append(Paragraph(
-                line.replace("<", "&lt;").replace(">", "&gt;"), code_style))
+                _sanitize_for_pdf(line[4:]), styles['Heading3']))
+        elif line.startswith("```") or line.startswith("    "):
+            elements.append(Paragraph(_sanitize_for_pdf(line), code_style))
         elif line.startswith("| "):
-            elements.append(Paragraph(line, body_style))
+            elements.append(Paragraph(_sanitize_for_pdf(line), body_style))
         elif line.startswith("- ") or line.startswith("* "):
-            elements.append(Paragraph(f"&bull; {line[2:]}", body_style))
+            elements.append(Paragraph(
+                "&bull; " + _sanitize_for_pdf(line[2:]), body_style))
         elif line.startswith("**") and line.endswith("**"):
-            elements.append(Paragraph(f"<b>{line[2:-2]}</b>", body_style))
+            elements.append(Paragraph(
+                "<b>" + _sanitize_for_pdf(line[2:-2]) + "</b>", body_style))
         else:
-            safe = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            elements.append(Paragraph(safe, body_style))
+            elements.append(Paragraph(_sanitize_for_pdf(line), body_style))
 
     elements.append(Spacer(1, 1*cm))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
@@ -385,7 +408,6 @@ def siem_threat_summary(request):
         by_category    = r.hgetall("aegis:siem:by_category") or {}
         running        = r.get("aegis:siem:running") == "true"
 
-        # Convert category counts to ints
         by_category = {k: int(v) for k, v in by_category.items()}
 
         threat_rate = round(total_threats / max(total_packets, 1) * 100, 2)
