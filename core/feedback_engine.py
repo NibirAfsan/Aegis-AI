@@ -520,8 +520,7 @@ def _update_stats(field: str):
 def sync_from_redis() -> dict:
     """
     Reads recent threat alerts from Redis and logs them to feedback CSV.
-    Called by the validate endpoint or retrain script — NEVER during capture.
-    This keeps the listener fast while still collecting training data.
+    Maps Redis field names to feedback format.
     """
     try:
         import redis
@@ -534,8 +533,24 @@ def sync_from_redis() -> dict:
         synced = 0
         for item in raw:
             try:
-                detection = json.loads(item)
-                # Skip if already logged (check by timestamp + port)
+                alert = json.loads(item)
+
+                # Map Redis field names to feedback format
+                detection = {
+                    "timestamp":      alert.get("timestamp", ""),
+                    "src":            alert.get("source", alert.get("src", "")),
+                    "dst":            alert.get("destination", alert.get("dst", "")),
+                    "port":           alert.get("dst_port", alert.get("port", 0)),
+                    "protocol":       alert.get("protocol_name", alert.get("protocol", "")),
+                    "packet_size":    alert.get("size", alert.get("packet_size", 0)),
+                    "classification": alert.get("ml_class", alert.get("alert", "UNKNOWN")),
+                    "ml_label":       alert.get("ml_class", "UNKNOWN"),
+                    "confidence":     alert.get("confidence", 0.85),
+                    "severity":       alert.get("severity", "LOW"),
+                    "detection_method": alert.get("detection_method", "hybrid"),
+                    "is_threat":      alert.get("is_threat", True),
+                }
+
                 if not _is_already_logged(detection):
                     log_detection(detection)
                     synced += 1
