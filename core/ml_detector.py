@@ -166,8 +166,8 @@ def _detect_flow_pattern(src_ip: str, dst_ip: str, dst_port: int,
                           f"(backdoor/RCE service)")
             }
 
-        # ── DDoS: 200+ packets to same destination in window ──
-        if _packet_counts[dst_ip] >= 200:
+        # ── DDoS: 50+ packets to same destination in window ──
+        if _packet_counts[dst_ip] >= 50:
             _packet_counts[dst_ip] = 0
             return {
                 "classification": "DDOS",
@@ -497,3 +497,4 @@ def get_model_info():
             "dataset": "CIC-IDS2017",
             "status": "loaded" if _model is not None else "not loaded"}
 
+            

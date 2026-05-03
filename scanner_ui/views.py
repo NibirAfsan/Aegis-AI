@@ -468,6 +468,82 @@ def siem_playbook(request):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# DYNAMIC LEARNING — GenAI-in-the-loop feedback pipeline
+# ─────────────────────────────────────────────────────────────────────────────
+
+def siem_learning_status(request):
+    """Returns dynamic learning pipeline statistics."""
+    try:
+        from core.feedback_engine import get_feedback_stats, get_anomalies
+        stats = get_feedback_stats()
+        stats["recent_anomalies"] = get_anomalies(5)
+        return JsonResponse(stats)
+    except Exception as e:
+        return JsonResponse({"error": str(e)})
+
+
+def siem_pending_reviews(request):
+    """Returns detections awaiting verification."""
+    try:
+        from core.feedback_engine import get_pending_reviews
+        count = int(request.GET.get('count', 20))
+        reviews = get_pending_reviews(count)
+        return JsonResponse({"reviews": reviews, "count": len(reviews)})
+    except Exception as e:
+        return JsonResponse({"reviews": [], "error": str(e)})
+
+
+@csrf_exempt
+def siem_submit_feedback(request):
+    """Human analyst submits feedback on a detection."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    try:
+        data = json.loads(request.body)
+        detection_id = data.get("detection_id", "")
+        verified_label = data.get("verified_label", "")
+        notes = data.get("notes", "")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    if not detection_id or not verified_label:
+        return JsonResponse({"error": "detection_id and verified_label required"}, status=400)
+    try:
+        from core.feedback_engine import submit_feedback
+        result = submit_feedback(detection_id, verified_label,
+                                 verified_by="human", notes=notes)
+        return JsonResponse(result)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def siem_genai_validate(request):
+    """Syncs Redis alerts to feedback CSV, then runs GenAI validation."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    try:
+        # Step 1: Sync alerts from Redis to feedback CSV
+        from core.feedback_engine import sync_from_redis, genai_validate_detections
+        sync_result = sync_from_redis()
+
+        # Step 2: Run GenAI validation on unverified detections
+        count = 10
+        try:
+            data = json.loads(request.body)
+            count = data.get("count", 10)
+        except Exception:
+            pass
+        validate_result = genai_validate_detections(count)
+
+        return JsonResponse({
+            "sync": sync_result,
+            "validation": validate_result,
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 

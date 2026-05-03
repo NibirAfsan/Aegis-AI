@@ -27,4 +27,10 @@ urlpatterns = [
     path('siem/threats/',                   views.siem_threat_summary, name='siem_threats'),
     path('siem/alerts/',                    views.siem_alerts,         name='siem_alerts'),
     path('siem/playbook/',                  views.siem_playbook,       name='siem_playbook'),
+
+    # ── Dynamic Learning (Phase 4) ───────────────────────────────
+    path('siem/learning/',                  views.siem_learning_status,   name='siem_learning'),
+    path('siem/reviews/',                   views.siem_pending_reviews,   name='siem_reviews'),
+    path('siem/feedback/',                  views.siem_submit_feedback,   name='siem_feedback'),
+    path('siem/validate/',                  views.siem_genai_validate,    name='siem_validate'),
 ]
