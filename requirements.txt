@@ -1,36 +1,41 @@
-# AEGIS Framework — requirements.txt
+# AEGIS-AI Framework — requirements.txt
 # Install: pip install -r requirements.txt
 
-# Core Django
+# ── Core Django ───────────────────────────────────────────
 Django==4.2.11
-# psycopg2-binary==2.9.9  # uncomment when switching to PostgreSQL
 
-# Scanning
+# ── Scanning ──────────────────────────────────────────────
 python-nmap==0.7.1
 requests==2.31.0
 urllib3==2.1.0
 
-# Network / forensics
+# ── Network / Forensics ──────────────────────────────────
 scapy==2.5.0
 
-# Async task queue
+# ── Async Task Queue ─────────────────────────────────────
 celery==5.3.6
 redis==5.0.3
 django-celery-results==2.5.1
 celery-progress==0.3
 flower==2.0.1
 
-# Attack tools — Phase 3
+# ── Attack Tools ──────────────────────────────────────────
 pymetasploit3==1.0.3
 
-# Reporting
+# ── ML Model (Phase 4 — SIEM) ────────────────────────────
+onnxruntime>=1.17.0
+numpy>=1.21.6
+
+# ── Reporting ─────────────────────────────────────────────
 reportlab==4.1.0
 markdown==3.5.2
 python-dotenv==1.0.1
 
-# GenAI — uncomment when you have a key
-# anthropic==0.25.0
-google-generativeai==0.8.6
+# ── GenAI Providers ──────────────────────────────────────
+google-genai>=1.0.0
 
-# Production server
+# Optional providers (uncomment if needed):
+# anthropic>=0.25.0
+
+# ── Production Server ────────────────────────────────────
 gunicorn==21.2.0
