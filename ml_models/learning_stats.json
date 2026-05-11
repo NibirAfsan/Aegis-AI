@@ -1,7 +1,7 @@
 {
-  "detections_logged": 115,
-  "last_updated": "2026-05-03T22:00:31.896501",
-  "genai_reviews": 100,
-  "corrections_made": 11,
-  "genai_validations": 2
+  "detections_logged": 125,
+  "last_updated": "2026-05-05T10:45:35.772989",
+  "genai_reviews": 125,
+  "corrections_made": 29,
+  "genai_validations": 4
 }

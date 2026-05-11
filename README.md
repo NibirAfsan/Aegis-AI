@@ -340,7 +340,7 @@ This framework is designed for **authorised security assessments only**. Always 
 
 ## Author
 
-**Nibir Afsan** — MSc Cybersecurity
+**Nibiruzzaman Nibir** — MSc Computer Networking & Cybersecurity
 University Project — 2026
 
 ---

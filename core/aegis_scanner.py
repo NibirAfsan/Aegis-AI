@@ -310,7 +310,7 @@ class UnifiedAegisEngine:
         """
         Brute-forces directories and files using a wordlist.
         Finds /backup_2019/, /old_admin/, /.env.prod etc.
-        Install: apt install gobuster wordlists
+        Install: apt install gobuster dirb
         """
         if port is None:
             port = self._detect_web_port()
@@ -320,15 +320,17 @@ class UnifiedAegisEngine:
         findings = []
 
         wordlists = [
+            "/usr/share/dirb/wordlists/common.txt",
             "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt",
             "/usr/share/wordlists/dirb/common.txt",
             "/usr/share/seclists/Discovery/Web-Content/common.txt",
+            "/usr/share/wordlists/nmap.lst",
         ]
         wordlist = next((w for w in wordlists if os.path.exists(w)), None)
 
         if not wordlist:
             self.results["gobuster"] = [
-                "[SKIP] No wordlist found. Run: apt install wordlists"
+                "[SKIP] No wordlist found. Run: apt install dirb"
             ]
             return
 
@@ -424,12 +426,8 @@ class UnifiedAegisEngine:
         ZAP actively attacks the web app to find XSS, SQLi, CSRF,
         insecure cookies, path traversal, open redirects, and more.
 
-        Requires ZAP running as a daemon:
-          docker run -d -p 8090:8080 owasp/zap2docker-stable \
-            zap.sh -daemon -host 0.0.0.0 -port 8080 \
-            -config api.key=aegis_zap_key
-
-        This is included in docker-compose.yml already.
+        Requires ZAP running as a daemon via docker-compose.
+        Uses docker exec to communicate with ZAP API (WSL2 compatible).
         """
         if port is None:
             port = self._detect_web_port()
@@ -438,67 +436,69 @@ class UnifiedAegisEngine:
         target_url = f"{scheme}://{self.target}:{port}"
         findings   = []
 
-        ZAP_API = "http://localhost:8090"
         ZAP_KEY = "aegis_zap_key"
+        ZAP_CONTAINER = "aegis_framework-zap-1"
+        ZAP_BASE = "http://localhost:8080"
+
+        def zap_api(endpoint, params=None):
+            """Call ZAP API via docker exec (WSL2 compatible)."""
+            param_str = ""
+            if params:
+                param_str = "&".join(f"{k}={v}" for k, v in params.items())
+            url = f"{ZAP_BASE}{endpoint}?apikey={ZAP_KEY}"
+            if param_str:
+                url += f"&{param_str}"
+            result = subprocess.run(
+                ["docker", "exec", ZAP_CONTAINER, "curl", "-s", url],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.returncode != 0:
+                raise Exception(f"docker exec failed: {result.stderr}")
+            return json.loads(result.stdout)
 
         try:
             import time
 
             # Step 1: Spider the target
-            spider_resp = requests.get(
-                f"{ZAP_API}/JSON/spider/action/scan/",
-                params={"url": target_url, "apikey": ZAP_KEY},
-                timeout=10,
-            )
-            spider_id = spider_resp.json().get("scan")
+            spider_data = zap_api("/JSON/spider/action/scan/",
+                                   {"url": target_url})
+            spider_id = spider_data.get("scan")
 
             # Wait for spider to finish
             for _ in range(40):
-                status = requests.get(
-                    f"{ZAP_API}/JSON/spider/view/status/",
-                    params={"scanId": spider_id, "apikey": ZAP_KEY},
-                    timeout=5,
-                ).json().get("status", "0")
+                status = zap_api("/JSON/spider/view/status/",
+                                  {"scanId": str(spider_id)}).get("status", "0")
                 if status == "100":
                     break
                 time.sleep(3)
 
             # Step 2: Active scan
-            scan_resp = requests.get(
-                f"{ZAP_API}/JSON/ascan/action/scan/",
-                params={"url": target_url, "apikey": ZAP_KEY},
-                timeout=10,
-            )
-            scan_id = scan_resp.json().get("scan")
+            scan_data = zap_api("/JSON/ascan/action/scan/",
+                                 {"url": target_url})
+            scan_id = scan_data.get("scan")
 
             for _ in range(60):
-                status = requests.get(
-                    f"{ZAP_API}/JSON/ascan/view/status/",
-                    params={"scanId": scan_id, "apikey": ZAP_KEY},
-                    timeout=5,
-                ).json().get("status", "0")
+                status = zap_api("/JSON/ascan/view/status/",
+                                  {"scanId": str(scan_id)}).get("status", "0")
                 if status == "100":
                     break
                 time.sleep(3)
 
             # Step 3: Collect alerts
-            alerts = requests.get(
-                f"{ZAP_API}/JSON/alert/view/alerts/",
-                params={"baseurl": target_url, "apikey": ZAP_KEY},
-                timeout=10,
-            ).json().get("alerts", [])
+            alerts = zap_api("/JSON/alert/view/alerts/",
+                              {"baseurl": target_url}).get("alerts", [])
 
             for alert in alerts:
-                risk  = alert.get("risk", "Informational").upper()
-                name  = alert.get("alert", "Unknown")
-                url   = alert.get("url", target_url)
-                desc  = alert.get("description", "")[:120]
+                risk = alert.get("risk", "Informational").upper()
+                name = alert.get("alert", "Unknown")
+                url = alert.get("url", target_url)
+                desc = alert.get("description", "")[:120]
                 findings.append(f"[{risk}] {name}  —  {url}\n          {desc}")
 
-        except requests.exceptions.ConnectionError:
-            findings.append(
-                "[SKIP] ZAP daemon not running. It starts automatically via docker-compose."
-            )
+        except subprocess.TimeoutExpired:
+            findings.append("[SKIP] ZAP scan timed out.")
+        except json.JSONDecodeError as e:
+            findings.append(f"[ERROR] ZAP: Invalid response — {e}")
         except Exception as e:
             findings.append(f"[ERROR] ZAP: {e}")
 
