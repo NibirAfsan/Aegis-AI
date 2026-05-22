@@ -488,7 +488,7 @@ function renderResults(data, severity) {
     markTab('comp',r.compliance,['ALERT','CRITICAL']);
     const b = document.getElementById('severityBadge');
     b.textContent = severity||'INFO'; b.className = `sev sev-${severity||'INFO'}`;
-    if (['CRITICAL','HIGH'].includes(severity)) document.getElementById('attackArea').style.display = 'block';
+    document.getElementById('attackArea').style.display = 'block';
     document.getElementById('reportBtn').style.display = 'inline-block';
     document.getElementById('progressArea').style.display = 'none';
     document.getElementById('resultsArea').style.display = 'block';
