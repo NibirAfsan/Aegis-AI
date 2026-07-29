@@ -60,6 +60,11 @@ KNOWN_PATTERNS = {
     "SQL_INJECTION", "WEB_ATTACK", "BOTNET", "HEARTBLEED", "NORMAL"
 }
 
+# Minimum GenAI confidence required to admit a validation into the
+# verified training corpus. Judgements below this are withheld and
+# routed to human review instead of contaminating training data.
+GENAI_CONFIDENCE_THRESHOLD = 0.85
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DETECTION LOGGING — called automatically by the listener
@@ -171,6 +176,7 @@ For EACH detection, respond with EXACTLY this JSON format:
       "original_label": "what the system classified it as",
       "verified_label": "correct label (same if correct, different if wrong)",
       "is_correct": true/false,
+      "confidence": 0.0 to 1.0 (your certainty in this judgement),
       "reasoning": "brief explanation why this is correct or what it should be"
     }}
   ]
@@ -204,22 +210,36 @@ Return ONLY valid JSON. No markdown, no explanation outside the JSON.
         applied = 0
         corrected = 0
 
+        gated_out = 0
         for v in validations:
             det_id = v.get("detection_id", "")
             verified_label = v.get("verified_label", "")
             reasoning = v.get("reasoning", "")
             is_correct = v.get("is_correct", True)
+            genai_conf = float(v.get("confidence", 0.0) or 0.0)
 
             if det_id and verified_label:
-                submit_feedback(
-                    detection_id=det_id,
-                    verified_label=verified_label,
-                    verified_by="genai",
-                    reasoning=reasoning
+                # CONFIDENCE GATE: only admit high-confidence, known-label
+                # judgements into the training corpus. Everything else is
+                # withheld for human review so hallucinated or uncertain
+                # labels cannot contaminate retraining.
+                admit = (
+                    genai_conf >= GENAI_CONFIDENCE_THRESHOLD
+                    and verified_label in KNOWN_PATTERNS
                 )
-                applied += 1
-                if not is_correct:
-                    corrected += 1
+                if admit:
+                    submit_feedback(
+                        detection_id=det_id,
+                        verified_label=verified_label,
+                        verified_by="genai",
+                        reasoning=f"[conf={genai_conf:.2f}] {reasoning}"
+                    )
+                    applied += 1
+                    if not is_correct:
+                        corrected += 1
+                else:
+                    _update_stats("genai_low_confidence_gated")
+                    gated_out += 1
 
         _update_stats("genai_validations")
 
@@ -228,8 +248,10 @@ Return ONLY valid JSON. No markdown, no explanation outside the JSON.
             "validated": applied,
             "corrected": corrected,
             "confirmed": applied - corrected,
+            "gated_out": gated_out,
             "message": (f"GenAI validated {applied} detections: "
-                        f"{applied - corrected} confirmed, {corrected} corrected")
+                        f"{applied - corrected} confirmed, {corrected} corrected, "
+                        f"{gated_out} withheld (low confidence)")
         }
 
     except Exception as e:
@@ -579,4 +601,4 @@ def _is_already_logged(detection: dict) -> bool:
                     return True
     except Exception:
         pass
-    return False        
+    return False
