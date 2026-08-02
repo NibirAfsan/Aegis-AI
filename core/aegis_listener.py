@@ -27,7 +27,7 @@ def _get_redis():
     return _redis
 
 
-def start_listener(interface="any", packet_count=0):
+def start_listener(interface="all", packet_count=0):
     global _listener_running, _listener_thread
     if _listener_running:
         return {"status": "already_running"}
@@ -128,9 +128,15 @@ def _sniff_loop(interface, packet_count):
             except Exception:
                 pass  # Redis write failure shouldn't stop packet capture
 
-        sniff(iface=interface if interface != "any" else None,
+        if interface == "all":
+            sniff_iface = ["lo", "eth0"]   # capture localhost AND external targets
+        elif interface == "any":
+            sniff_iface = None
+        else:
+            sniff_iface = interface
+        sniff(iface=sniff_iface,
               prn=process_packet, count=packet_count if packet_count > 0 else 0,
-              store=False, stop_filter=lambda _: not _listener_running)
+              store=False, stop_filter=lambda _: not _listener_running)      
 
     except PermissionError:
         print("[LISTENER] Permission denied — run with sudo")
